@@ -8,6 +8,10 @@ const productRoutes = require('./routes/productRoutes');
 const orderRoutes = require('./routes/orderRoutes');
 const cartRoutes = require('./routes/cartRoutes');
 const { protect } = require('./middleware/authMiddleware');
+const schoolProgramRoutes = require('./routes/schoolProgramRoutes');
+const demoRoutes = require('./routes/demoRoutes');
+const blogRoutes = require('./routes/blogRoutes');
+
 
 
 dotenv.config();
@@ -27,6 +31,11 @@ app.use('/api/orders', orderRoutes);
 
 app.use("/api/cart", protect, cartRoutes);
 
+app.use('/api/school-programs', schoolProgramRoutes);
+
+app.use('/api/demo', demoRoutes);
+
+app.use('/api/blogs', blogRoutes);
 
 app.get('/', (req, res) => {
     res.send('API is running...');

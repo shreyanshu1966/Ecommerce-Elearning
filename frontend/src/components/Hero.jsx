@@ -1,6 +1,7 @@
 import React from 'react';
 import { ArrowRight } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { Link } from 'react-router-dom';
 
 const Hero = () => {
   return (
@@ -31,20 +32,23 @@ const Hero = () => {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.8, delay: 0.4 }}
               >
-                <a 
-                  href="#" 
+                <Link 
+                  to="/courses"
                   className="relative inline-flex items-center justify-center rounded-md bg-blue-600 px-6 py-3 text-sm font-semibold text-white shadow-sm hover:bg-blue-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600 overflow-hidden group"
                 >
                   <span className="absolute w-0 h-0 transition-all duration-300 ease-out bg-white rounded-full group-hover:w-full group-hover:h-full opacity-10"></span>
                   <span className="relative">Explore Courses</span>
-                </a>
-                <a href="#" className="text-sm font-semibold leading-6 text-gray-900 flex items-center group">
+                </Link>
+                <Link 
+                  to="#" 
+                  className="text-sm font-semibold leading-6 text-gray-900 flex items-center group"
+                >
                   <span className="relative">
                     Learn more
                     <span className="block max-w-0 group-hover:max-w-full transition-all duration-300 h-0.5 bg-gray-900"></span>
                   </span>
                   <ArrowRight className="ml-1 h-4 w-4 transition-transform group-hover:translate-x-1" />
-                </a>
+                </Link>
               </motion.div>
             </div>
           </div>
