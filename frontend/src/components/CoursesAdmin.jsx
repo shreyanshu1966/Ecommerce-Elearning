@@ -1,15 +1,6 @@
 import { useState, useEffect } from "react";
-import axios from "axios";
-import {
-  Edit,
-  Trash2,
-  Save,
-  X,
-  Plus,
-  BookOpen,
-  User,
-  Clock,
-} from "lucide-react";
+import { Edit, Trash2, Save, X, Plus, BookOpen, User, Clock } from "lucide-react";
+import axiosInstance from '../utils/axiosConfig'; // Replace api with axiosInstance
 
 const CoursesAdmin = () => {
   const [courses, setCourses] = useState([]);
@@ -36,7 +27,7 @@ const CoursesAdmin = () => {
 
   const fetchCourses = async () => {
     try {
-      const { data } = await axios.get("/api/courses");
+      const { data } = await axiosInstance.get("/courses");
       setCourses(data);
     } catch (error) {
       console.error("Error fetching courses:", error.response?.data || error.message);
@@ -67,36 +58,24 @@ const CoursesAdmin = () => {
     }
 
     try {
-      const token = localStorage.getItem("token");
-      if (!token) {
-        console.error("No token found. User must be logged in.");
-        return;
-      }
-
-      // Convert multiline curriculum string to an array
       const curriculumArray = curriculum
         .split("\n")
         .map((line) => line.trim())
         .filter((line) => line !== "");
 
-      const config = { headers: { Authorization: `Bearer ${token}` } };
-      await axios.post(
-        "/api/courses",
-        {
-          title,
-          description,
-          price,
-          image,
-          instructor,
-          curriculum: curriculumArray,
-          duration: duration ? Number(duration) : 0,
-          lessons: lessons ? Number(lessons) : 0,
-          level,
-          instructorBio,
-          instructorImage,
-        },
-        config
-      );
+      await axiosInstance.post("/courses", {
+        title,
+        description,
+        price,
+        image,
+        instructor,
+        curriculum: curriculumArray,
+        duration: duration ? Number(duration) : 0,
+        lessons: lessons ? Number(lessons) : 0,
+        level,
+        instructorBio,
+        instructorImage,
+      });
 
       fetchCourses();
       setNewCourse({
@@ -121,27 +100,16 @@ const CoursesAdmin = () => {
     if (!editCourse) return;
 
     try {
-      const token = localStorage.getItem("token");
-      if (!token) {
-        console.error("No token found. User must be logged in.");
-        return;
-      }
-
       const curriculumArray = editCourse.curriculum
         ? editCourse.curriculum.split("\n").map((line) => line.trim()).filter((line) => line !== "")
         : [];
 
-      const config = { headers: { Authorization: `Bearer ${token}` } };
-      await axios.put(
-        `/api/courses/${editCourse._id}`,
-        {
-          ...editCourse,
-          curriculum: curriculumArray,
-          duration: editCourse.duration ? Number(editCourse.duration) : 0,
-          lessons: editCourse.lessons ? Number(editCourse.lessons) : 0,
-        },
-        config
-      );
+      await axiosInstance.put(`/courses/${editCourse._id}`, {
+        ...editCourse,
+        curriculum: curriculumArray,
+        duration: editCourse.duration ? Number(editCourse.duration) : 0,
+        lessons: editCourse.lessons ? Number(editCourse.lessons) : 0,
+      });
 
       fetchCourses();
       setEditCourse(null);
@@ -155,14 +123,7 @@ const CoursesAdmin = () => {
     if (!isConfirmed) return;
 
     try {
-      const token = localStorage.getItem("token");
-      if (!token) {
-        console.error("No token found. User must be logged in.");
-        return;
-      }
-
-      const config = { headers: { Authorization: `Bearer ${token}` } };
-      await axios.delete(`/api/courses/${id}`, config);
+      await axiosInstance.delete(`/courses/${id}`);
       setCourses(courses.filter((c) => c._id !== id));
     } catch (error) {
       console.error("Error deleting course:", error.response?.data || error.message);

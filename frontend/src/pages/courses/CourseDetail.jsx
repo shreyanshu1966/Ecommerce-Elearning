@@ -1,25 +1,31 @@
-import { useEffect, useState } from "react";
+import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
-import axios from "axios";
 import { addToCart } from "../../store/cartSlice";
-import { Clock, BookOpen, Rocket, ShoppingCart, CheckCircle } from "lucide-react";
+import axiosInstance from "../../utils/axiosConfig";
+import { BookOpen, CheckCircle, Clock, User, BarChart2, ShoppingCart } from "lucide-react";
 
 const CourseDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const dispatch = useDispatch();
-  const { cartItems } = useSelector((state) => state.cart);
-  const { user } = useSelector((state) => state.auth);
+  const { cartItems } = useSelector(state => state.cart);
+  const { user } = useSelector(state => state.auth);
   const [course, setCourse] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
     const fetchCourse = async () => {
       try {
-        const { data } = await axios.get(`/api/courses/${id}`);
+        setLoading(true);
+        const { data } = await axiosInstance.get(`/courses/${id}`);
         setCourse(data);
-      } catch (error) {
-        console.error("Error fetching course:", error);
+      } catch (err) {
+        console.error("Error fetching course:", err);
+        setError("Failed to load course details");
+      } finally {
+        setLoading(false);
       }
     };
     fetchCourse();
@@ -30,8 +36,18 @@ const CourseDetail = () => {
       navigate("/login");
       return;
     }
-    if (!course) return;
-    dispatch(addToCart({ itemId: course._id, itemType: "Course", quantity: 1 }));
+    
+    // Make sure we're passing the actual ID from the course object
+    if (!course || !course._id) {
+      console.error("Cannot add to cart: course or course._id is undefined");
+      return;
+    }
+    
+    dispatch(addToCart({ 
+      itemId: course._id, 
+      itemType: "Course", 
+      quantity: 1 
+    }));
   };
 
   const isInCart = cartItems.some(
@@ -41,10 +57,30 @@ const CourseDetail = () => {
        item.course === course?._id)
   );
 
-  if (!course) {
+  if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="max-w-7xl mx-auto p-8">
+        <div className="bg-red-50 text-red-700 p-4 rounded-lg text-center">
+          {error}
+        </div>
+      </div>
+    );
+  }
+
+  if (!course) {
+    return (
+      <div className="max-w-7xl mx-auto p-8">
+        <div className="bg-yellow-50 text-yellow-700 p-4 rounded-lg text-center">
+          Course not found
+        </div>
       </div>
     );
   }
@@ -53,49 +89,87 @@ const CourseDetail = () => {
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
       <div className="bg-white rounded-2xl shadow-xl overflow-hidden">
         {/* Course Header */}
-        <div className="relative bg-gray-900">
+        <div className="aspect-w-16 aspect-h-6 bg-gradient-to-r from-blue-500 to-indigo-600 relative">
           <img
             src={course.image}
             alt={course.title}
-            className="w-full h-96 object-cover opacity-90"
+            className="w-full h-full object-cover opacity-75"
           />
-          <div className="absolute inset-0 bg-gradient-to-t from-gray-900 via-transparent to-transparent flex items-end p-8">
-            <h1 className="text-4xl font-bold text-white max-w-3xl">
-              {course.title}
-            </h1>
-          </div>
-        </div>
-
-        {/* Course Details Grid */}
-        <div className="grid lg:grid-cols-3 gap-8 p-8">
-          {/* Main Content */}
-          <div className="lg:col-span-2 space-y-8">
-            <div className="prose max-w-none">
-              <h2 className="text-2xl font-bold text-gray-800 mb-4">About This Course</h2>
-              <p className="text-gray-600 leading-relaxed">{course.description}</p>
-            </div>
-
-            <div className="bg-blue-50 rounded-xl p-6">
-              <h3 className="text-xl font-semibold text-gray-800 mb-4">
-                What You&apos;ll Learn
-              </h3>
-              <div className="grid md:grid-cols-2 gap-4">
-                {course.curriculum?.map((item, index) => (
-                  <div key={index} className="flex items-start space-x-3">
-                    <CheckCircle className="h-5 w-5 text-blue-500 flex-shrink-0 mt-1" />
-                    <span className="text-gray-700">{item}</span>
-                  </div>
-                ))}
+          <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
+          <div className="absolute bottom-0 left-0 right-0 p-8 text-white">
+            <h1 className="text-4xl font-bold mb-4">{course.title}</h1>
+            <div className="flex items-center gap-6 flex-wrap">
+              <div className="flex items-center gap-2">
+                <User className="h-5 w-5" />
+                <span>{course.instructor}</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <Clock className="h-5 w-5" />
+                <span>{course.duration} hours</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <BarChart2 className="h-5 w-5" />
+                <span>{course.level || "All Levels"}</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <BookOpen className="h-5 w-5" />
+                <span>{course.lessons || 0} lessons</span>
               </div>
             </div>
           </div>
+        </div>
+
+        <div className="grid lg:grid-cols-3 gap-8 p-8">
+          {/* Course Details */}
+          <div className="lg:col-span-2 space-y-8">
+            <div>
+              <h2 className="text-2xl font-bold text-gray-800 mb-4">About This Course</h2>
+              <p className="text-gray-600 leading-relaxed">
+                {course.description}
+              </p>
+            </div>
+
+            <div>
+              <h2 className="text-2xl font-bold text-gray-800 mb-4">What You'll Learn</h2>
+              <ul className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                {Array.isArray(course.curriculum) ? (
+                  course.curriculum.map((item, index) => (
+                    <li key={index} className="flex items-start gap-2">
+                      <CheckCircle className="h-5 w-5 text-green-500 mt-1 flex-shrink-0" />
+                      <span className="text-gray-700">{item}</span>
+                    </li>
+                  ))
+                ) : (
+                  <li>No curriculum details available</li>
+                )}
+              </ul>
+            </div>
+
+            {course.instructorBio && (
+              <div>
+                <h2 className="text-2xl font-bold text-gray-800 mb-4">About the Instructor</h2>
+                <div className="flex items-start gap-4">
+                  {course.instructorImage && (
+                    <img
+                      src={course.instructorImage}
+                      alt={course.instructor}
+                      className="w-20 h-20 rounded-full object-cover"
+                    />
+                  )}
+                  <div>
+                    <h3 className="text-xl font-semibold text-gray-800">{course.instructor}</h3>
+                    <p className="text-gray-600 mt-2">{course.instructorBio}</p>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
 
           {/* Sidebar */}
-          <div className="space-y-6">
-            {/* Pricing and CTA */}
-            <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
-              <div className="space-y-4">
-                <div className="flex justify-between items-center">
+          <div>
+            <div className="bg-gray-50 p-6 rounded-xl shadow-sm">
+              <div className="mb-4">
+                <div className="flex items-end gap-2">
                   <span className="text-3xl font-bold text-gray-800">
                     ${course.price}
                   </span>
@@ -127,46 +201,26 @@ const CourseDetail = () => {
                     </div>
                   )}
                 </button>
+              </div>
 
-                {/* Hours, Lessons, Level */}
-                <div className="space-y-3 pt-4 border-t border-gray-200">
-                  <div className="flex items-center gap-3 text-gray-600">
-                    <Clock className="h-5 w-5 text-blue-500" />
-                    <span>{course.duration} Hours Content</span>
-                  </div>
-                  <div className="flex items-center gap-3 text-gray-600">
-                    <BookOpen className="h-5 w-5 text-blue-500" />
-                    <span>{course.lessons} Lessons</span>
-                  </div>
-                  <div className="flex items-center gap-3 text-gray-600">
-                    <Rocket className="h-5 w-5 text-blue-500" />
-                    <span>{course.level} Level</span>
-                  </div>
-                </div>
+              <div className="space-y-4 pt-4 border-t border-gray-200">
+                <h3 className="font-semibold text-gray-800">This course includes:</h3>
+                <ul className="space-y-2">
+                  <li className="flex items-center gap-3 text-sm text-gray-700">
+                    <Clock className="h-4 w-4 text-blue-500" />
+                    {course.duration || 0} hours on-demand video
+                  </li>
+                  <li className="flex items-center gap-3 text-sm text-gray-700">
+                    <BookOpen className="h-4 w-4 text-blue-500" />
+                    {course.lessons || 0} lessons
+                  </li>
+                  <li className="flex items-center gap-3 text-sm text-gray-700">
+                    <CheckCircle className="h-4 w-4 text-blue-500" />
+                    Full lifetime access
+                  </li>
+                </ul>
               </div>
             </div>
-
-            {/* Instructor Card */}
-            {course.instructor && (
-              <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
-                <h3 className="text-lg font-semibold text-gray-800 mb-4">Instructor</h3>
-                <div className="flex items-center gap-4">
-                  {course.instructorImage && (
-                    <img
-                      src={course.instructorImage}
-                      alt={course.instructor}
-                      className="w-16 h-16 object-cover rounded-full"
-                    />
-                  )}
-                  <div>
-                    <p className="font-medium text-gray-800">{course.instructor}</p>
-                    {course.instructorBio && (
-                      <p className="text-gray-600 mt-1">{course.instructorBio}</p>
-                    )}
-                  </div>
-                </div>
-              </div>
-            )}
           </div>
         </div>
       </div>

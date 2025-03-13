@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
-import axios from "axios";
+import axiosInstance from "../utils/axiosConfig"; // Replace axios import
 import {
   Clock,
   User,
@@ -21,7 +21,7 @@ const BlogDetail = () => {
   useEffect(() => {
     const fetchBlog = async () => {
       try {
-        const { data } = await axios.get(`/api/blogs/${id}`);
+        const { data } = await axiosInstance.get(`/blogs/${id}`); // Remove /api prefix
         setBlog(data);
         generateToc(data.content);
       } catch (error) {

@@ -1,112 +1,5 @@
-// import { createSlice } from "@reduxjs/toolkit";
-// import axios from "axios";
-
-// const authSlice = createSlice({
-//   name: "auth",
-//   initialState: {
-//     user: JSON.parse(localStorage.getItem("user")) || null,
-//     token: localStorage.getItem("token") || null,
-//   },
-//   reducers: {
-//     loginSuccess: (state, action) => {
-//       state.user = action.payload.user;
-//       state.token = action.payload.token;
-//       localStorage.setItem("user", JSON.stringify(action.payload.user));
-//       localStorage.setItem("token", action.payload.token);
-//     },
-//     logout: (state) => {
-//       state.user = null;
-//       state.token = null;
-//       localStorage.removeItem("user");
-//       localStorage.removeItem("token");
-//     },
-//   },
-// });
-
-// export const { loginSuccess, logout } = authSlice.actions;
-// export default authSlice.reducer;
-
-// // Thunk function for logging in
-// export const loginUser = (credentials) => async (dispatch) => {
-//   try {
-//     const { data } = await axios.post("/api/users/login", credentials);
-//     dispatch(loginSuccess(data));
-//   } catch (error) {
-//     console.error("Login failed", error);
-//   }
-// };
-
-// export const signupUser = (userData) => async (dispatch) => {
-//   try {
-//     const { data } = await axios.post("/api/users/register", userData);
-//     dispatch(loginSuccess(data)); // Automatically log in after signup
-//   } catch (error) {
-//     console.error("Signup failed", error);
-//   }
-// };
-
-
-// import { createSlice } from "@reduxjs/toolkit";
-// import axios from "axios";
-
-// const authSlice = createSlice({
-//   name: "auth",
-//   initialState: {
-//     user: JSON.parse(localStorage.getItem("user")) || null,
-//     token: localStorage.getItem("token") || null,
-//   },
-//   reducers: {
-//     loginSuccess: (state, action) => {
-//       console.log("User Data on Login:", action.payload.user); // Debugging
-//       state.user = action.payload.user;
-//       state.token = action.payload.token;
-
-//       // Store user and token in localStorage
-//       localStorage.setItem("user", JSON.stringify(action.payload.user));
-//       localStorage.setItem("token", action.payload.token);
-//     },
-//     logout: (state) => {
-//       state.user = null;
-//       state.token = null;
-//       localStorage.removeItem("user");
-//       localStorage.removeItem("token");
-//     },
-//   },
-// });
-
-// export const { loginSuccess, logout } = authSlice.actions;
-// export default authSlice.reducer;
-
-// // Thunk function for logging in
-// export const loginUser = (credentials) => async (dispatch) => {
-//   try {
-//     const { data } = await axios.post("/api/users/login", credentials);
-//     console.log("User Role on Login:", data.user?.isAdmin);
-
-//     // Ensure the backend includes 'role' in response
-//     if (!data.user?.role) {
-//       console.error("User role is missing in response!");
-//     }
-
-//     dispatch(loginSuccess(data));
-//   } catch (error) {
-//     console.error("Login failed", error);
-//   }
-// };
-
-// // Thunk function for signing up
-// export const signupUser = (userData) => async (dispatch) => {
-//   try {
-//     const { data } = await axios.post("/api/users/register", userData);
-//     dispatch(loginSuccess(data)); // Automatically log in after signup
-//   } catch (error) {
-//     console.error("Signup failed", error);
-//   }
-// };
-
-
 import { createSlice } from "@reduxjs/toolkit";
-import axios from "axios";
+import axiosInstance from '../utils/axiosConfig';
 
 // Utility functions to safely retrieve stored values from localStorage
 const getStoredUser = () => {
@@ -116,6 +9,7 @@ const getStoredUser = () => {
       return JSON.parse(storedUser);
     } catch (error) {
       console.error("Error parsing stored user:", error);
+      localStorage.removeItem("user");
       return null;
     }
   }
@@ -132,13 +26,16 @@ const authSlice = createSlice({
   initialState: {
     user: getStoredUser(),
     token: getStoredToken(),
+    loading: false,
+    error: null,
   },
   reducers: {
     loginSuccess: (state, action) => {
-      console.log("User Data on Login:", action.payload.user); // Debugging
       state.user = action.payload.user;
       state.token = action.payload.token;
-
+      state.loading = false;
+      state.error = null;
+      
       // Store user and token in localStorage if valid
       if (action.payload.user) {
         localStorage.setItem("user", JSON.stringify(action.payload.user));
@@ -147,43 +44,62 @@ const authSlice = createSlice({
         localStorage.setItem("token", action.payload.token);
       }
     },
+    loginStart: (state) => {
+      state.loading = true;
+      state.error = null;
+    },
+    loginFailure: (state, action) => {
+      state.loading = false;
+      state.error = action.payload;
+    },
     logout: (state) => {
       state.user = null;
       state.token = null;
       localStorage.removeItem("user");
       localStorage.removeItem("token");
-      
     },
   },
 });
 
-export const { loginSuccess, logout } = authSlice.actions;
+export const { loginSuccess, loginStart, loginFailure, logout } = authSlice.actions;
 export default authSlice.reducer;
 
 // Thunk function for logging in
 export const loginUser = (credentials) => async (dispatch) => {
   try {
-    const { data } = await axios.post("/api/users/login", credentials);
-    console.log("User Role on Login:", data.user?.isAdmin);
-
-    // Ensure the backend includes 'role' in response
-    if (!data.user?.role) {
-      console.error("User role is missing in response!");
+    dispatch(loginStart());
+    const { data } = await axiosInstance.post("/users/login", credentials);
+    
+    // Ensure we have both user and token
+    if (!data.token || !data.user) {
+      throw new Error("Invalid response format from server");
     }
-
+    
     dispatch(loginSuccess(data));
+    return { success: true };
   } catch (error) {
-    console.error("Login failed", error);
+    const errorMessage = error.response?.data?.message || "Login failed. Please try again.";
+    dispatch(loginFailure(errorMessage));
+    return { success: false, error: errorMessage };
   }
 };
 
 // Thunk function for signing up
 export const signupUser = (userData) => async (dispatch) => {
   try {
-    const { data } = await axios.post("/api/users/register", userData);
-    // Automatically log in after signup
+    dispatch(loginStart());
+    const { data } = await axiosInstance.post("/users/register", userData);
+    
+    // Ensure we have both user and token
+    if (!data.token || !data.user) {
+      throw new Error("Invalid response format from server");
+    }
+    
     dispatch(loginSuccess(data));
+    return { success: true };
   } catch (error) {
-    console.error("Signup failed", error);
+    const errorMessage = error.response?.data?.message || "Signup failed. Please try again.";
+    dispatch(loginFailure(errorMessage));
+    return { success: false, error: errorMessage };
   }
 };

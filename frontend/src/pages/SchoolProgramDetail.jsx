@@ -1,207 +1,6 @@
-
-// // SchoolProgramDetail.jsx
-// import { useEffect, useState } from "react";
-// import { useParams } from "react-router-dom";
-// import axios from "axios";
-
-// const SchoolProgramDetail = () => {
-//   const { id } = useParams();
-//   const [program, setProgram] = useState(null);
-//   const [loading, setLoading] = useState(true);
-//   const [showWatchModal, setShowWatchModal] = useState(false);
-//   const [showBookModal, setShowBookModal] = useState(false);
-//   const [bookingDetails, setBookingDetails] = useState({
-//     name: "",
-//     email: "",
-//     phone: "",
-//     message: "",
-//   });
-//   const [bookingStatus, setBookingStatus] = useState("");
-
-//   useEffect(() => {
-//     const fetchProgram = async () => {
-//       try {
-//         const { data } = await axios.get(`/api/school-programs/${id}`);
-//         setProgram(data);
-//       } catch (error) {
-//         console.error("Error fetching school program:", error.response?.data || error.message);
-//       } finally {
-//         setLoading(false);
-//       }
-//     };
-//     fetchProgram();
-//   }, [id]);
-
-//   // Helper function: Converts a YouTube URL into an embeddable URL.
-//   const getEmbedUrl = (url) => {
-//     if (!url) return "";
-//     let videoId = "";
-//     // Matches "https://www.youtube.com/watch?v=VIDEO_ID"
-//     const watchParam = url.match(/v=([^&]+)/);
-//     if (watchParam && watchParam[1]) {
-//       videoId = watchParam[1];
-//     }
-//     // Matches "https://youtu.be/VIDEO_ID"
-//     const shortUrl = url.match(/youtu\.be\/([^?]+)/);
-//     if (shortUrl && shortUrl[1]) {
-//       videoId = shortUrl[1];
-//     }
-//     return videoId ? `https://www.youtube.com/embed/${videoId}` : url;
-//   };
-
-//   // Pre-populate booking form with a default message including program title.
-//   const handleBookDemoClick = () => {
-//     setBookingDetails((prev) => ({
-//       ...prev,
-//       message: `I am interested in booking a demo for ${program.title}. Please contact me.`,
-//     }));
-//     setShowBookModal(true);
-//   };
-
-//   const handleBookingSubmit = async (e) => {
-//     e.preventDefault();
-//     try {
-//       await axios.post("/api/demo/book-demo", { ...bookingDetails, programId: id });
-//       setBookingStatus("Booking request sent successfully!");
-//       setBookingDetails({ name: "", email: "", phone: "", message: "" });
-//     } catch (error) {
-//       setBookingStatus("Failed to send booking request. Please try again.");
-//       console.error("Error booking demo:", error);
-//     }
-//   };
-
-//   if (loading) {
-//     return (
-//       <div className="min-h-screen flex items-center justify-center">
-//         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
-//       </div>
-//     );
-//   }
-
-//   if (!program) {
-//     return (
-//       <div className="text-center mt-8">
-//         <p>School Program not found.</p>
-//       </div>
-//     );
-//   }
-
-//   return (
-//     <div className="max-w-5xl mx-auto p-6">
-//       <h1 className="text-3xl font-bold">{program.title}</h1>
-//             <div className="mt-4">
-//          <img className="" src={program.image} alt={program.title} />
-//        </div>
-//       <p className="mt-4">{program.description}</p>
-      
-//       <div className="mt-6 flex space-x-4">
-//         <button 
-//           onClick={() => setShowWatchModal(true)} 
-//           className="bg-blue-500 text-white px-4 py-2 rounded-md"
-//         >
-//           Watch Demo
-//         </button>
-//         <button 
-//           onClick={handleBookDemoClick} 
-//           className="bg-green-500 text-white px-4 py-2 rounded-md"
-//         >
-//           Book Demo
-//         </button>
-//       </div>
-
-//       {/* Watch Demo Modal */}
-      // {showWatchModal && (
-      //   <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
-      //     <div className="bg-white p-4 rounded-md relative max-w-2xl w-full">
-      //       <button onClick={() => setShowWatchModal(false)} className="absolute top-2 right-2 text-gray-500 text-2xl">&times;</button>
-      //       <div className="w-full aspect-w-16 aspect-h-9">
-      //         <iframe 
-      //           width="560" 
-      //           height="315" 
-      //           src={getEmbedUrl(program.youtubeLink)} 
-      //           title="YouTube video player" 
-      //           frameBorder="0" 
-      //           allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
-      //           allowFullScreen
-      //         ></iframe>
-      //       </div>
-      //     </div>
-      //   </div>
-      // )}
-
-//       {/* Book Demo Modal */}
-//       {showBookModal && (
-//         <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
-//           <div className="bg-white p-6 rounded-md relative max-w-md w-full">
-//             <button onClick={() => setShowBookModal(false)} className="absolute top-2 right-2 text-gray-500 text-2xl">&times;</button>
-//             <h2 className="text-xl font-bold mb-4">Book a Demo</h2>
-//             {bookingStatus && <p className="mb-2">{bookingStatus}</p>}
-//             <form onSubmit={handleBookingSubmit} className="space-y-4">
-//               {/* Read-only Program Name Field */}
-//               <div>
-//                 <label className="block text-sm font-medium">Program</label>
-//                 <input 
-//                   type="text"
-//                   value={program.title}
-//                   disabled
-//                   className="w-full border px-3 py-2 rounded-md bg-gray-100"
-//                 />
-//               </div>
-//               <div>
-//                 <label className="block text-sm font-medium">Name</label>
-//                 <input 
-//                   type="text"
-//                   value={bookingDetails.name}
-//                   onChange={(e) => setBookingDetails({ ...bookingDetails, name: e.target.value })}
-//                   className="w-full border px-3 py-2 rounded-md"
-//                   required
-//                 />
-//               </div>
-//               <div>
-//                 <label className="block text-sm font-medium">Email</label>
-//                 <input 
-//                   type="email"
-//                   value={bookingDetails.email}
-//                   onChange={(e) => setBookingDetails({ ...bookingDetails, email: e.target.value })}
-//                   className="w-full border px-3 py-2 rounded-md"
-//                   required
-//                 />
-//               </div>
-//               <div>
-//                 <label className="block text-sm font-medium">Phone</label>
-//                 <input 
-//                   type="tel"
-//                   value={bookingDetails.phone}
-//                   onChange={(e) => setBookingDetails({ ...bookingDetails, phone: e.target.value })}
-//                   className="w-full border px-3 py-2 rounded-md"
-//                 />
-//               </div>
-//               <div>
-//                 <label className="block text-sm font-medium">Message</label>
-//                 <textarea 
-//                   value={bookingDetails.message}
-//                   onChange={(e) => setBookingDetails({ ...bookingDetails, message: e.target.value })}
-//                   className="w-full border px-3 py-2 rounded-md"
-//                 />
-//               </div>
-//               <button type="submit" className="bg-green-500 text-white px-4 py-2 rounded-md">
-//                 Send Booking Request
-//               </button>
-//             </form>
-//           </div>
-//         </div>
-//       )}
-//     </div>
-//   );
-// };
-
-// export default SchoolProgramDetail;
-
-
-
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
-import axios from "axios";
+import axiosInstance from '../utils/axiosConfig'; // Replace axios with axiosInstance
 import { PlayCircle, Calendar, X, Mail, Phone, User } from "lucide-react";
 
 const SchoolProgramDetail = () => {
@@ -221,7 +20,7 @@ const SchoolProgramDetail = () => {
   useEffect(() => {
     const fetchProgram = async () => {
       try {
-        const { data } = await axios.get(`/api/school-programs/${id}`);
+        const { data } = await axiosInstance.get(`/school-programs/${id}`); // Remove /api prefix
         setProgram(data);
       } catch (error) {
         console.error("Error fetching school program:", error.response?.data || error.message);
@@ -249,7 +48,7 @@ const SchoolProgramDetail = () => {
   const handleBookingSubmit = async (e) => {
     e.preventDefault();
     try {
-      await axios.post("/api/demo/book-demo", { ...bookingDetails, programId: id });
+      await axiosInstance.post("/demo/book-demo", { ...bookingDetails, programId: id }); // Remove /api prefix
       setBookingStatus("success");
       setTimeout(() => setBookingStatus(""), 3000);
       setBookingDetails({ name: "", email: "", phone: "", message: "" });

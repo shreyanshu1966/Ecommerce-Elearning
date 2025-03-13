@@ -3,8 +3,7 @@ import { ShoppingCart, View } from "lucide-react";
 import { motion } from "framer-motion";
 import { useInView } from "react-intersection-observer";
 import { Link } from "react-router-dom";
-import axios from "axios";
-
+import axiosInstance from '../utils/axiosConfig';
 
 const ProductCard = ({ product, index }) => {
   const [ref, inView] = useInView({
@@ -72,17 +71,26 @@ const ProductSection = () => {
     threshold: 0.1,
   });
 
-  const [products, setProducts] = useState([]);
+  const [products, setProducts] = useState([]); // Initialize as empty array
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
   useEffect(() => {
     const fetchProducts = async () => {
       try {
-        const { data } = await axios.get("/api/products");
-        setProducts(data.slice(0, 6)); // Show only 6 products
+        setLoading(true);
+        const { data } = await axiosInstance.get("/products"); // Remove the duplicate /api prefix
+        // Check if data is an array before setting
+        if (Array.isArray(data)) {
+          setProducts(data.slice(0, 6)); // Show only 6 products
+        } else {
+          console.error("API response is not an array:", data);
+          setProducts([]); // Set empty array if response is invalid
+        }
       } catch (err) {
+        console.error("Failed to load products:", err);
         setError("Failed to load products.");
+        setProducts([]); // Ensure products is always an array
       } finally {
         setLoading(false);
       }
@@ -112,10 +120,15 @@ const ProductSection = () => {
         ) : (
           <>
             <div className="mt-12 grid grid-cols-1 gap-x-8 gap-y-12 sm:grid-cols-2 lg:grid-cols-3">
-              {products.map((product, index) => (
-                <ProductCard key={product._id} product={product} index={index} />
-              ))}
+              {Array.isArray(products) && products.length > 0 ? (
+                products.map((product, index) => (
+                  <ProductCard key={product?._id || index} product={product} index={index} />
+                ))
+              ) : (
+                <p className="col-span-3 text-center py-12 text-gray-500">No products available at the moment.</p>
+              )}
             </div>
+            
             {/* Explore More Button */}
             <div className="mt-12 text-center">
               <Link

@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
-import axios from "axios";
 import { Edit, Trash2, Save, X, Plus } from "lucide-react";
+import axiosInstance from '../utils/axiosConfig'; // Replace api with axiosInstance
 
 const BlogAdmin = () => {
   const [blogs, setBlogs] = useState([]);
@@ -18,7 +18,7 @@ const BlogAdmin = () => {
 
   const fetchBlogs = async () => {
     try {
-      const { data } = await axios.get("/api/blogs");
+      const { data } = await axiosInstance.get("/blogs");
       setBlogs(data);
     } catch (error) {
       console.error("Error fetching blogs:", error.response?.data || error.message);
@@ -32,13 +32,7 @@ const BlogAdmin = () => {
       return;
     }
     try {
-      const token = localStorage.getItem("token");
-      if (!token) {
-        console.error("No token found. User must be logged in.");
-        return;
-      }
-      const config = { headers: { Authorization: `Bearer ${token}` } };
-      await axios.post("/api/blogs", { title, content, image, author }, config);
+      await axiosInstance.post("/blogs", { title, content, image, author });
       fetchBlogs();
       setNewBlog({ title: "", content: "", image: "", author: "" });
     } catch (error) {
@@ -49,13 +43,7 @@ const BlogAdmin = () => {
   const updateBlog = async () => {
     if (!editBlog) return;
     try {
-      const token = localStorage.getItem("token");
-      if (!token) {
-        console.error("No token found. User must be logged in.");
-        return;
-      }
-      const config = { headers: { Authorization: `Bearer ${token}` } };
-      await axios.put(`/api/blogs/${editBlog._id}`, editBlog, config);
+      await axiosInstance.put(`/blogs/${editBlog._id}`, editBlog);
       fetchBlogs();
       setEditBlog(null);
     } catch (error) {
@@ -67,13 +55,7 @@ const BlogAdmin = () => {
     const isConfirmed = window.confirm("Are you sure you want to delete this blog post?");
     if (!isConfirmed) return;
     try {
-      const token = localStorage.getItem("token");
-      if (!token) {
-        console.error("No token found. User must be logged in.");
-        return;
-      }
-      const config = { headers: { Authorization: `Bearer ${token}` } };
-      await axios.delete(`/api/blogs/${id}`, config);
+      await axiosInstance.delete(`/blogs/${id}`);
       setBlogs(blogs.filter((b) => b._id !== id));
     } catch (error) {
       console.error("Error deleting blog:", error.response?.data || error.message);

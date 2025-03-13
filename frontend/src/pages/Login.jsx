@@ -1,67 +1,28 @@
-// import { useState } from "react";
-// import { useDispatch } from "react-redux";
-// import { loginUser } from "../store/authSlice";
-// import { useNavigate } from "react-router-dom";
-
-// const Login = () => {
-//   const [email, setEmail] = useState("");
-//   const [password, setPassword] = useState("");
-//   const dispatch = useDispatch();
-//   const navigate = useNavigate();
-
-//   const handleLogin = async (e) => {
-//     e.preventDefault();
-//     await dispatch(loginUser({ email, password }));
-//     navigate("/"); // Redirect to home
-//   };
-
-//   return (
-//     <div className="max-w-md mx-auto mt-10 p-6 bg-white shadow-md rounded">
-//       <h2 className="text-2xl font-bold mb-4">Login</h2>
-//       <form onSubmit={handleLogin}>
-//         <input
-//           type="email"
-//           placeholder="Email"
-//           className="w-full p-2 border mb-3"
-//           value={email}
-//           onChange={(e) => setEmail(e.target.value)}
-//           required
-//         />
-//         <input
-//           type="password"
-//           placeholder="Password"
-//           className="w-full p-2 border mb-3"
-//           value={password}
-//           onChange={(e) => setPassword(e.target.value)}
-//           required
-//         />
-//         <button type="submit" className="w-full bg-blue-500 text-white py-2 rounded">
-//           Login
-//         </button>
-//       </form>
-//     </div>
-//   );
-// };
-
-// export default Login;
-
-
 import { useState } from "react";
-import { useDispatch } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import { loginUser } from "../store/authSlice";
-import { useNavigate } from "react-router-dom";
-import { Lock, Mail, LogIn } from "lucide-react";
+import { useNavigate, useLocation } from "react-router-dom";
+import { Lock, Mail, LogIn, AlertCircle } from "lucide-react";
 
 const Login = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const dispatch = useDispatch();
   const navigate = useNavigate();
-
+  const location = useLocation();
+  
+  const { loading, error } = useSelector((state) => state.auth);
+  
+  // Get the redirect path from location state or default to homepage
+  const from = location.state?.from || "/";
+  
   const handleLogin = async (e) => {
     e.preventDefault();
-    await dispatch(loginUser({ email, password }));
-    navigate("/");
+    const result = await dispatch(loginUser({ email, password }));
+    if (result.success) {
+      // Redirect to the page they tried to visit or homepage
+      navigate(from, { replace: true });
+    }
   };
 
   return (
@@ -74,6 +35,13 @@ const Login = () => {
           </h2>
           <p className="text-gray-600">Sign in to continue your learning journey</p>
         </div>
+
+        {error && (
+          <div className="mb-6 p-4 bg-red-50 border-l-4 border-red-500 text-red-700 flex items-center">
+            <AlertCircle className="h-5 w-5 mr-2" />
+            <p>{error}</p>
+          </div>
+        )}
 
         <form onSubmit={handleLogin} className="space-y-6">
           <div>
@@ -112,9 +80,17 @@ const Login = () => {
 
           <button
             type="submit"
-            className="w-full bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white py-3.5 rounded-lg font-semibold transition-all transform hover:shadow-lg"
+            disabled={loading}
+            className="w-full bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white py-3.5 rounded-lg font-semibold transition-all transform hover:shadow-lg flex justify-center items-center"
           >
-            Sign In
+            {loading ? (
+              <>
+                <span className="animate-spin h-5 w-5 mr-2 border-2 border-white border-t-transparent rounded-full"></span>
+                Signing in...
+              </>
+            ) : (
+              "Sign In"
+            )}
           </button>
 
           <div className="text-center text-sm text-gray-600 mt-4">
@@ -126,10 +102,6 @@ const Login = () => {
               Create account
             </a>
           </div>
-
-         
-
-         
         </form>
       </div>
     </div>

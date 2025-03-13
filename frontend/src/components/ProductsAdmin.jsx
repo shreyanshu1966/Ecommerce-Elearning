@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import axios from "axios";
+import axiosInstance from '../utils/axiosConfig'; // Replace axios with axiosInstance
 import {
   Edit,
   Trash2,
@@ -31,44 +31,26 @@ const ProductsAdmin = () => {
   });
 
   useEffect(() => {
-    axios.get("/api/products").then((res) => setProducts(res.data));
+    axiosInstance.get("/products").then((res) => setProducts(res.data)); // Remove /api prefix
   }, []);
 
   const addProduct = async () => {
-    if (!newProduct.name || !newProduct.price || !newProduct.category || !newProduct.stock) {
-      console.error("All fields are required!");
-      return;
-    }
-  
     try {
-      const token = localStorage.getItem("token");
-      if (!token) {
-        console.error("No token found. User must be logged in.");
-        return;
-      }
-  
-      const config = { headers: { Authorization: `Bearer ${token}` } };
-      const { data } = await axios.post("/api/products", newProduct, config);
-  
-      setProducts([...products, data.product]); 
+      // No need for manual token handling
+      const { data } = await axiosInstance.post("/products", newProduct); // Remove /api prefix
+      setProducts([...products, data.product]);
       setNewProduct({ name: "", description: "", price: "", image: "", category: "", stock: "" });
     } catch (error) {
       console.error("Error adding product:", error.response?.data || error.message);
     }
   };
-
+  
   const updateProduct = async () => {
     if (!editProduct) return;
-  
+    
     try {
-      const token = localStorage.getItem("token");
-      if (!token) {
-        console.error("No token found. User must be logged in.");
-        return;
-      }
-  
-      const config = { headers: { Authorization: `Bearer ${token}` } };
-      const { data } = await axios.put(`/api/products/${editProduct._id}`, editData, config);
+      // No need for manual token handling
+      const { data } = await axiosInstance.put(`/products/${editProduct._id}`, editData); // Remove /api prefix
       
       setProducts(products.map((p) => (p._id === editProduct._id ? data.product || data : p)));
       setEditProduct(null);
@@ -83,14 +65,8 @@ const ProductsAdmin = () => {
     if (!confirmDelete) return;
   
     try {
-      const token = localStorage.getItem("token");
-      if (!token) {
-        console.error("No token found. User must be logged in.");
-        return;
-      }
-  
-      const config = { headers: { Authorization: `Bearer ${token}` } };
-      await axios.delete(`/api/products/${id}`, config);
+      // No need for manual token handling
+      await axiosInstance.delete(`/products/${id}`); // Remove /api prefix
       
       setProducts(products.filter((p) => p._id !== id));
     } catch (error) {

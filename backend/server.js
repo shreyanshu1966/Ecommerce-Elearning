@@ -5,7 +5,7 @@ const connectDB = require('./config/db');
 const userRoutes = require('./routes/userRoutes');
 const courseRoutes = require('./routes/courseRoutes');
 const productRoutes = require('./routes/productRoutes');
-const orderRoutes = require('./routes/orderRoutes');
+
 const cartRoutes = require('./routes/cartRoutes');
 const { protect } = require('./middleware/authMiddleware');
 const schoolProgramRoutes = require('./routes/schoolProgramRoutes');
@@ -26,11 +26,10 @@ app.use('/api/users', userRoutes);
 app.use('/api/courses', courseRoutes);
 
 app.use('/api/products', productRoutes);
-
-app.use('/api/orders', orderRoutes);
+const orderRoutes = require('./routes/orderRoutes');
 
 app.use("/api/cart", protect, cartRoutes);
-
+app.use('/api/orders', orderRoutes);
 app.use('/api/school-programs', schoolProgramRoutes);
 
 app.use('/api/demo', demoRoutes);

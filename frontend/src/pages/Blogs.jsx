@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import axios from "axios";
+import axiosInstance from "../utils/axiosConfig";
 import { ArrowRight, Clock, Tag } from "lucide-react";
 
 const Blogs = () => {
@@ -8,7 +8,7 @@ const Blogs = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    axios.get("/api/blogs")
+    axiosInstance.get("/blogs")
       .then((res) => {
         setBlogs(res.data);
         setLoading(false);
