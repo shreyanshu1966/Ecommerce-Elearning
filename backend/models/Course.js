@@ -37,20 +37,22 @@ const courseSchema = mongoose.Schema(
       required: true,
       default: 0,
     },
+    level: {
+      type: String,
+      default: "Beginner",
+    },
     features: [String],
     requirements: [String],
-    curriculum: [
-      {
-        section: String,
-        lectures: [
-          {
-            title: String,
-            duration: String,
-            videoUrl: String,
-          },
-        ],
-      },
-    ],
+    curriculum: {
+      type: [mongoose.Schema.Types.Mixed],
+      default: []
+    },
+    instructorBio: {
+      type: String,
+    },
+    instructorImage: {
+      type: String,
+    },
   },
   {
     timestamps: true,

@@ -15,6 +15,7 @@ const createCourse = async (req, res) => {
       level,
       instructorBio,
       instructorImage,
+      category, // Add category here
     } = req.body;
 
     const course = new Course({
@@ -29,6 +30,7 @@ const createCourse = async (req, res) => {
       level,
       instructorBio,
       instructorImage,
+      category, // Add category here
     });
 
     await course.save();
@@ -76,6 +78,7 @@ const updateCourse = async (req, res) => {
       level,
       instructorBio,
       instructorImage,
+      category, // Add category here
     } = req.body;
 
     const course = await Course.findById(req.params.id);
@@ -109,6 +112,9 @@ const updateCourse = async (req, res) => {
     }
     if (instructorImage !== undefined) {
       course.instructorImage = instructorImage;
+    }
+    if (category !== undefined) {
+      course.category = category;
     }
 
     await course.save();

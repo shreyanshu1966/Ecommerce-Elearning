@@ -17,6 +17,7 @@ const CoursesAdmin = () => {
     level: "",
     instructorBio: "",
     instructorImage: "",
+    category: "", // Add missing category field
   });
 
   const [editCourse, setEditCourse] = useState(null);
@@ -35,47 +36,60 @@ const CoursesAdmin = () => {
   };
 
   const addCourse = async () => {
-    const {
-      title,
-      description,
-      price,
-      image,
-      instructor,
-      curriculum,
-      duration,
-      lessons,
-      level,
-      instructorBio,
-      instructorImage,
-    } = newCourse;
-
-    // Basic validation
-    if (!title || !description || !price || !image || !instructor) {
-      console.error(
-        "All required fields (title, description, price, image, instructor) must be filled!"
-      );
+    // Check if category is provided
+    if (!newCourse.category) {
+      alert("Category is required");
       return;
     }
 
     try {
-      const curriculumArray = curriculum
-        .split("\n")
-        .map((line) => line.trim())
-        .filter((line) => line !== "");
-
-      await axiosInstance.post("/courses", {
+      // Make sure category is included in the request
+      const {
         title,
         description,
         price,
         image,
         instructor,
-        curriculum: curriculumArray,
-        duration: duration ? Number(duration) : 0,
-        lessons: lessons ? Number(lessons) : 0,
+        curriculum,
+        duration,
+        lessons,
         level,
         instructorBio,
         instructorImage,
+        category,
+      } = newCourse;
+
+      console.log("Sending data:", { // Debugging: Log the data being sent
+        title,
+        description,
+        price,
+        image,
+        instructor,
+        curriculum: Array.isArray(curriculum) ? curriculum : [],
+        duration,
+        lessons,
+        level,
+        instructorBio,
+        instructorImage,
+        category,
       });
+
+      const response = await axiosInstance.post('/courses', {
+        title,
+        description,
+        price,
+        image,
+        instructor,
+        curriculum: Array.isArray(curriculum) ? curriculum : [],
+        duration,
+        lessons,
+        level,
+        instructorBio,
+        instructorImage,
+        category, // Make sure this field is included
+      });
+
+      console.log("Response data:", response.data); // Debugging: Log the response
 
       fetchCourses();
       setNewCourse({
@@ -90,14 +104,22 @@ const CoursesAdmin = () => {
         level: "",
         instructorBio: "",
         instructorImage: "",
+        category: "", // Reset category
       });
     } catch (error) {
       console.error("Error adding course:", error.response?.data || error.message);
+      alert(`Failed to add course: ${error.response?.data?.message || error.message}`);
     }
   };
 
   const updateCourse = async () => {
     if (!editCourse) return;
+
+    // Validate category is present for update
+    if (!editCourse.category) {
+      alert("Category is required");
+      return;
+    }
 
     try {
       const curriculumArray = editCourse.curriculum
@@ -109,12 +131,14 @@ const CoursesAdmin = () => {
         curriculum: curriculumArray,
         duration: editCourse.duration ? Number(editCourse.duration) : 0,
         lessons: editCourse.lessons ? Number(editCourse.lessons) : 0,
+        category: editCourse.category, // Explicitly include category
       });
 
       fetchCourses();
       setEditCourse(null);
     } catch (error) {
       console.error("Error updating course:", error.response?.data || error.message);
+      alert(`Failed to update course: ${error.response?.data?.message || error.message}`);
     }
   };
 
@@ -139,6 +163,7 @@ const CoursesAdmin = () => {
       level: course.level || "",
       instructorBio: course.instructorBio || "",
       instructorImage: course.instructorImage || "",
+      category: course.category || "", // Include category
     });
   };
 
@@ -162,6 +187,18 @@ const CoursesAdmin = () => {
                 placeholder="Course Title"
                 value={newCourse.title}
                 onChange={(e) => setNewCourse({ ...newCourse, title: e.target.value })}
+                className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700">
+                Category <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="text"
+                placeholder="Course Category (e.g. Programming, Robotics)"
+                value={newCourse.category}
+                onChange={(e) => setNewCourse({ ...newCourse, category: e.target.value })}
                 className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
               />
             </div>
@@ -406,6 +443,15 @@ const CoursesAdmin = () => {
                               value={editCourse.curriculum}
                               onChange={(e) => setEditCourse({ ...editCourse, curriculum: e.target.value })}
                               className="w-full px-3 py-2 border border-gray-300 rounded-md h-32"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700">Category</label>
+                            <input
+                              value={editCourse.category}
+                              onChange={(e) => setEditCourse({ ...editCourse, category: e.target.value })}
+                              placeholder="Category"
+                              className="w-full px-3 py-2 border border-gray-300 rounded-md"
                             />
                           </div>
                           <div className="flex gap-2 justify-end pt-4">
