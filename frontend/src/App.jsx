@@ -42,6 +42,7 @@ import RetryPayment from "./pages/RetryPayment";
 import MyCourses from "./pages/MyCourses";
 import AccountSettings from "./pages/AccountSettings";
 import OrderSuccess from "./pages/OrderSuccess";
+import CourseLearn from "./pages/courses/CourseLearn";
 
 const App = () => {
   return (
@@ -71,6 +72,7 @@ const App = () => {
             <Route path="/signup" element={<Signup />} />
             <Route path="/products/:id" element={<ProductDetail />} />
             <Route path="/courses/:id" element={<CourseDetail />} />
+            <Route path="/courses/:id/learn" element={<CourseLearn />} />
             <Route path="/cart" element={<Cart />} />
             <Route path="/blogs" element={<Blogs />} />
             <Route path="/blogs/:id" element={<BlogDetail />} />

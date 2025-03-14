@@ -1,5 +1,40 @@
 const mongoose = require('mongoose');
 
+const lessonSchema = new mongoose.Schema({
+  title: {
+    type: String,
+    required: true
+  },
+  description: {
+    type: String,
+    default: ''
+  },
+  videoUrl: {
+    type: String,
+    default: ''
+  },
+  duration: {
+    type: Number, // in minutes
+    default: 0
+  },
+  isFree: {
+    type: Boolean,
+    default: false
+  }
+});
+
+const moduleSchema = new mongoose.Schema({
+  title: {
+    type: String,
+    required: true
+  },
+  description: {
+    type: String,
+    default: ''
+  },
+  lessons: [lessonSchema]
+});
+
 const courseSchema = mongoose.Schema(
   {
     title: {
@@ -53,6 +88,7 @@ const courseSchema = mongoose.Schema(
     instructorImage: {
       type: String,
     },
+    modules: [moduleSchema], // Add modules field
   },
   {
     timestamps: true,

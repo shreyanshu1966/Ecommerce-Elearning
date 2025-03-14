@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
-import { Edit, Trash2, Save, X, Plus, BookOpen, User, Clock } from "lucide-react";
-import axiosInstance from '../utils/axiosConfig'; // Replace api with axiosInstance
+import { Edit, Trash2, Save, X, Plus, BookOpen, User, Clock, ChevronDown, ChevronRight, Video, Layers } from "lucide-react";
+import axiosInstance from '../utils/axiosConfig';
 
 const CoursesAdmin = () => {
   const [courses, setCourses] = useState([]);
@@ -11,16 +11,20 @@ const CoursesAdmin = () => {
     image: "",
     instructor: "",
     curriculum: "",
-    // NEW FIELDS
     duration: "",
     lessons: "",
     level: "",
     instructorBio: "",
     instructorImage: "",
-    category: "", // Add missing category field
+    category: "",
+    modules: [],
   });
 
   const [editCourse, setEditCourse] = useState(null);
+  const [activeTab, setActiveTab] = useState("basic");
+  const [currentCourseId, setCurrentCourseId] = useState(null);
+  const [modulesList, setModulesList] = useState([]);
+  const [expandedModules, setExpandedModules] = useState({});
 
   useEffect(() => {
     fetchCourses();
@@ -35,15 +39,24 @@ const CoursesAdmin = () => {
     }
   };
 
+  const fetchCourseDetails = async (courseId) => {
+    try {
+      const { data } = await axiosInstance.get(`/courses/${courseId}`);
+      setModulesList(data.modules || []);
+      setCurrentCourseId(courseId);
+    } catch (error) {
+      console.error("Error fetching course details:", error);
+      setModulesList([]);
+    }
+  };
+
   const addCourse = async () => {
-    // Check if category is provided
     if (!newCourse.category) {
       alert("Category is required");
       return;
     }
 
     try {
-      // Make sure category is included in the request
       const {
         title,
         description,
@@ -59,37 +72,21 @@ const CoursesAdmin = () => {
         category,
       } = newCourse;
 
-      console.log("Sending data:", { // Debugging: Log the data being sent
-        title,
-        description,
-        price,
-        image,
-        instructor,
-        curriculum: Array.isArray(curriculum) ? curriculum : [],
-        duration,
-        lessons,
-        level,
-        instructorBio,
-        instructorImage,
-        category,
-      });
-
       const response = await axiosInstance.post('/courses', {
         title,
         description,
         price,
         image,
         instructor,
-        curriculum: Array.isArray(curriculum) ? curriculum : [],
-        duration,
-        lessons,
+        curriculum: curriculum.split("\n").filter(item => item.trim() !== ""),
+        duration: Number(duration) || 0,
+        lessons: Number(lessons) || 0,
         level,
         instructorBio,
         instructorImage,
-        category, // Make sure this field is included
+        category,
+        modules: [],
       });
-
-      console.log("Response data:", response.data); // Debugging: Log the response
 
       fetchCourses();
       setNewCourse({
@@ -104,7 +101,7 @@ const CoursesAdmin = () => {
         level: "",
         instructorBio: "",
         instructorImage: "",
-        category: "", // Reset category
+        category: "",
       });
     } catch (error) {
       console.error("Error adding course:", error.response?.data || error.message);
@@ -115,7 +112,6 @@ const CoursesAdmin = () => {
   const updateCourse = async () => {
     if (!editCourse) return;
 
-    // Validate category is present for update
     if (!editCourse.category) {
       alert("Category is required");
       return;
@@ -131,7 +127,7 @@ const CoursesAdmin = () => {
         curriculum: curriculumArray,
         duration: editCourse.duration ? Number(editCourse.duration) : 0,
         lessons: editCourse.lessons ? Number(editCourse.lessons) : 0,
-        category: editCourse.category, // Explicitly include category
+        category: editCourse.category,
       });
 
       fetchCourses();
@@ -139,6 +135,19 @@ const CoursesAdmin = () => {
     } catch (error) {
       console.error("Error updating course:", error.response?.data || error.message);
       alert(`Failed to update course: ${error.response?.data?.message || error.message}`);
+    }
+  };
+
+  const saveModules = async () => {
+    try {
+      await axiosInstance.put(`/courses/${currentCourseId}/modules`, {
+        modules: modulesList,
+      });
+      fetchCourses();
+      alert("Course modules updated successfully");
+    } catch (error) {
+      console.error("Error saving modules:", error);
+      alert("Failed to save modules");
     }
   };
 
@@ -163,10 +172,75 @@ const CoursesAdmin = () => {
       level: course.level || "",
       instructorBio: course.instructorBio || "",
       instructorImage: course.instructorImage || "",
-      category: course.category || "", // Include category
+      category: course.category || "",
     });
   };
 
+  const handleModuleClick = (courseId) => {
+    setCurrentCourseId(courseId);
+    fetchCourseDetails(courseId);
+  };
+
+  const addModule = () => {
+    setModulesList([
+      ...modulesList,
+      {
+        title: "New Module",
+        description: "",
+        lessons: []
+      }
+    ]);
+  };
+
+  const updateModule = (index, field, value) => {
+    const updatedModules = [...modulesList];
+    updatedModules[index][field] = value;
+    setModulesList(updatedModules);
+  };
+
+  const deleteModule = (index) => {
+    if (!window.confirm("Are you sure you want to delete this module?")) return;
+    const updatedModules = [...modulesList];
+    updatedModules.splice(index, 1);
+    setModulesList(updatedModules);
+  };
+
+  const toggleModuleExpand = (index) => {
+    setExpandedModules({
+      ...expandedModules,
+      [index]: !expandedModules[index]
+    });
+  };
+
+  const addLesson = (moduleIndex) => {
+    const updatedModules = [...modulesList];
+    updatedModules[moduleIndex].lessons = [
+      ...(updatedModules[moduleIndex].lessons || []),
+      {
+        title: "New Lesson",
+        description: "",
+        videoUrl: "",
+        duration: 0,
+        isFree: false
+      }
+    ];
+    setModulesList(updatedModules);
+  };
+
+  const updateLesson = (moduleIndex, lessonIndex, field, value) => {
+    const updatedModules = [...modulesList];
+    updatedModules[moduleIndex].lessons[lessonIndex][field] = value;
+    setModulesList(updatedModules);
+  };
+
+  const deleteLesson = (moduleIndex, lessonIndex) => {
+    if (!window.confirm("Are you sure you want to delete this lesson?")) return;
+    const updatedModules = [...modulesList];
+    updatedModules[moduleIndex].lessons.splice(lessonIndex, 1);
+    setModulesList(updatedModules);
+  };
+
+  // Main component rendering
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <h2 className="text-2xl font-bold text-gray-800 mb-6">Manage Courses</h2>
@@ -508,12 +582,21 @@ const CoursesAdmin = () => {
                           <button
                             onClick={() => handleEditClick(course)}
                             className="p-2 text-blue-500 hover:bg-blue-50 rounded-md"
+                            title="Edit course details"
                           >
                             <Edit className="h-5 w-5" />
                           </button>
                           <button
+                            onClick={() => handleModuleClick(course._id)}
+                            className="p-2 text-green-500 hover:bg-green-50 rounded-md"
+                            title="Manage modules and lessons"
+                          >
+                            <Layers className="h-5 w-5" />
+                          </button>
+                          <button
                             onClick={() => deleteCourse(course._id)}
                             className="p-2 text-red-500 hover:bg-red-50 rounded-md"
+                            title="Delete course"
                           >
                             <Trash2 className="h-5 w-5" />
                           </button>
@@ -527,6 +610,193 @@ const CoursesAdmin = () => {
           </table>
         </div>
       </div>
+
+      {/* Module and Lesson Manager */}
+      {currentCourseId && (
+        <div className="mt-8 bg-white rounded-xl shadow-lg overflow-hidden">
+          <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
+            <h3 className="text-lg font-semibold text-gray-700 flex items-center gap-2">
+              <Layers className="h-5 w-5 text-blue-500" />
+              Course Modules & Lessons
+            </h3>
+            <button
+              onClick={() => setCurrentCourseId(null)}
+              className="text-gray-500 hover:text-gray-700"
+            >
+              <X className="h-5 w-5" />
+            </button>
+          </div>
+
+          <div className="p-6">
+            <div className="mb-6 flex justify-between items-center">
+              <h4 className="text-md font-medium text-gray-700">
+                {courses.find(c => c._id === currentCourseId)?.title || "Course"} - Modules
+              </h4>
+              <button
+                onClick={addModule}
+                className="px-4 py-2 bg-blue-500 text-white rounded-md flex items-center gap-2 hover:bg-blue-600"
+              >
+                <Plus className="h-4 w-4" />
+                Add Module
+              </button>
+            </div>
+
+            {modulesList.length === 0 ? (
+              <div className="text-center py-8 text-gray-500">
+                No modules yet. Add your first module to get started.
+              </div>
+            ) : (
+              <div className="space-y-6">
+                {modulesList.map((module, moduleIndex) => (
+                  <div key={moduleIndex} className="border border-gray-200 rounded-lg overflow-hidden">
+                    <div className="bg-gray-50 p-4 flex justify-between items-center">
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => toggleModuleExpand(moduleIndex)}
+                          className="p-1 rounded-md hover:bg-gray-200"
+                        >
+                          {expandedModules[moduleIndex] ? (
+                            <ChevronDown className="h-5 w-5" />
+                          ) : (
+                            <ChevronRight className="h-5 w-5" />
+                          )}
+                        </button>
+                        <input
+                          type="text"
+                          value={module.title}
+                          onChange={(e) => updateModule(moduleIndex, "title", e.target.value)}
+                          className="font-medium text-gray-800 border-none bg-transparent focus:outline-none focus:ring-2 focus:ring-blue-500 rounded px-2 py-1"
+                        />
+                      </div>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => addLesson(moduleIndex)}
+                          className="px-3 py-1 bg-green-500 text-white text-sm rounded flex items-center gap-1 hover:bg-green-600"
+                        >
+                          <Plus className="h-3 w-3" />
+                          Lesson
+                        </button>
+                        <button
+                          onClick={() => deleteModule(moduleIndex)}
+                          className="p-1 text-red-500 hover:bg-red-50 rounded-md"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </div>
+                    </div>
+                    
+                    {expandedModules[moduleIndex] && (
+                      <div className="p-4 space-y-4">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">Module Description</label>
+                          <textarea
+                            value={module.description}
+                            onChange={(e) => updateModule(moduleIndex, "description", e.target.value)}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-md h-20"
+                            placeholder="Enter module description..."
+                          />
+                        </div>
+                        
+                        <div>
+                          <h5 className="text-sm font-medium text-gray-700 mb-2">Lessons ({module.lessons?.length || 0})</h5>
+                          
+                          {!module.lessons?.length ? (
+                            <div className="text-sm text-gray-500 py-4 text-center border border-dashed border-gray-300 rounded-md">
+                              No lessons yet. Add your first lesson.
+                            </div>
+                          ) : (
+                            <div className="space-y-3">
+                              {module.lessons.map((lesson, lessonIndex) => (
+                                <div key={lessonIndex} className="border border-gray-200 rounded-md p-3">
+                                  <div className="flex justify-between items-center mb-3">
+                                    <div className="flex items-center gap-2">
+                                      <Video className="h-4 w-4 text-blue-500" />
+                                      <input
+                                        type="text"
+                                        value={lesson.title}
+                                        onChange={(e) => updateLesson(moduleIndex, lessonIndex, "title", e.target.value)}
+                                        className="font-medium text-gray-800 border-none bg-transparent focus:outline-none focus:ring-2 focus:ring-blue-500 rounded px-2 py-1"
+                                      />
+                                    </div>
+                                    <button
+                                      onClick={() => deleteLesson(moduleIndex, lessonIndex)}
+                                      className="p-1 text-red-500 hover:bg-red-50 rounded-md"
+                                    >
+                                      <Trash2 className="h-4 w-4" />
+                                    </button>
+                                  </div>
+                                  
+                                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div>
+                                      <label className="block text-xs font-medium text-gray-700 mb-1">Description</label>
+                                      <textarea
+                                        value={lesson.description}
+                                        onChange={(e) => updateLesson(moduleIndex, lessonIndex, "description", e.target.value)}
+                                        className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm h-20"
+                                        placeholder="Lesson description..."
+                                      />
+                                    </div>
+                                    <div className="space-y-3">
+                                      <div>
+                                        <label className="block text-xs font-medium text-gray-700 mb-1">Video URL</label>
+                                        <input
+                                          type="text"
+                                          value={lesson.videoUrl}
+                                          onChange={(e) => updateLesson(moduleIndex, lessonIndex, "videoUrl", e.target.value)}
+                                          className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+                                          placeholder="https://example.com/video.mp4"
+                                        />
+                                      </div>
+                                      <div className="grid grid-cols-2 gap-3">
+                                        <div>
+                                          <label className="block text-xs font-medium text-gray-700 mb-1">Duration (min)</label>
+                                          <input
+                                            type="number"
+                                            value={lesson.duration}
+                                            onChange={(e) => updateLesson(moduleIndex, lessonIndex, "duration", Number(e.target.value))}
+                                            className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+                                            placeholder="0"
+                                          />
+                                        </div>
+                                        <div className="flex items-center">
+                                          <input
+                                            type="checkbox"
+                                            id={`free-${moduleIndex}-${lessonIndex}`}
+                                            checked={lesson.isFree}
+                                            onChange={(e) => updateLesson(moduleIndex, lessonIndex, "isFree", e.target.checked)}
+                                            className="h-4 w-4 text-blue-600 border-gray-300 rounded"
+                                          />
+                                          <label htmlFor={`free-${moduleIndex}-${lessonIndex}`} className="ml-2 text-xs font-medium text-gray-700">
+                                            Preview (Free)
+                                          </label>
+                                        </div>
+                                      </div>
+                                    </div>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+            
+            <div className="mt-6 flex justify-end">
+              <button
+                onClick={saveModules}
+                className="px-6 py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 flex items-center gap-2"
+              >
+                <Save className="h-5 w-5" />
+                Save All Modules
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

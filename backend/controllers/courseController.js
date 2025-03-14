@@ -15,7 +15,8 @@ const createCourse = async (req, res) => {
       level,
       instructorBio,
       instructorImage,
-      category, // Add category here
+      category,
+      modules,
     } = req.body;
 
     const course = new Course({
@@ -30,7 +31,8 @@ const createCourse = async (req, res) => {
       level,
       instructorBio,
       instructorImage,
-      category, // Add category here
+      category,
+      modules: Array.isArray(modules) ? modules : [],
     });
 
     await course.save();
@@ -43,7 +45,7 @@ const createCourse = async (req, res) => {
 // Get all courses
 const getCourses = async (req, res) => {
   try {
-    const courses = await Course.find();
+    const courses = await Course.find().select('-modules.lessons.videoUrl');
     res.json(courses);
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -78,7 +80,8 @@ const updateCourse = async (req, res) => {
       level,
       instructorBio,
       instructorImage,
-      category, // Add category here
+      category,
+      modules,
     } = req.body;
 
     const course = await Course.findById(req.params.id);
@@ -97,7 +100,11 @@ const updateCourse = async (req, res) => {
       course.curriculum = curriculum;
     }
 
-    // NEW fields
+    // Update modules if provided
+    if (Array.isArray(modules)) {
+      course.modules = modules;
+    }
+
     if (duration !== undefined) {
       course.duration = duration;
     }
@@ -124,6 +131,45 @@ const updateCourse = async (req, res) => {
   }
 };
 
+// Add a new API endpoint to update modules for a course
+const updateCourseModules = async (req, res) => {
+  try {
+    const { modules } = req.body;
+    const course = await Course.findById(req.params.id);
+    
+    if (!course) {
+      return res.status(404).json({ message: 'Course not found' });
+    }
+
+    if (!Array.isArray(modules)) {
+      return res.status(400).json({ message: 'Modules must be an array' });
+    }
+
+    course.modules = modules;
+    
+    // Update total lesson count
+    let totalLessons = 0;
+    let totalDuration = 0;
+    
+    modules.forEach(module => {
+      if (Array.isArray(module.lessons)) {
+        totalLessons += module.lessons.length;
+        module.lessons.forEach(lesson => {
+          totalDuration += lesson.duration || 0;
+        });
+      }
+    });
+    
+    course.lessons = totalLessons;
+    course.duration = Math.round(totalDuration / 60); // Convert minutes to hours
+    
+    await course.save();
+    res.json({ message: 'Course modules updated successfully', course });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
 // Delete a course (Admin only)
 const deleteCourse = async (req, res) => {
   try {
@@ -144,5 +190,6 @@ module.exports = {
   getCourses,
   getCourseById,
   updateCourse,
+  updateCourseModules,
   deleteCourse
 };

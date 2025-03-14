@@ -1,9 +1,9 @@
 import { useState, useEffect } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, Link } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { addToCart } from "../../store/cartSlice";
 import axiosInstance from "../../utils/axiosConfig";
-import { BookOpen, CheckCircle, Clock, User, BarChart2, ShoppingCart } from "lucide-react";
+import { BookOpen, CheckCircle, Clock, User, BarChart2, ShoppingCart, PlayCircle, Lock } from "lucide-react";
 
 const CourseDetail = () => {
   const { id } = useParams();
@@ -14,6 +14,7 @@ const CourseDetail = () => {
   const [course, setCourse] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [isEnrolled, setIsEnrolled] = useState(false);
 
   useEffect(() => {
     const fetchCourse = async () => {
@@ -21,6 +22,11 @@ const CourseDetail = () => {
         setLoading(true);
         const { data } = await axiosInstance.get(`/courses/${id}`);
         setCourse(data);
+        
+        // Ensure we have modules property, even if empty
+        if (!data.modules) {
+          data.modules = [];
+        }
       } catch (err) {
         console.error("Error fetching course:", err);
         setError("Failed to load course details");
@@ -30,6 +36,22 @@ const CourseDetail = () => {
     };
     fetchCourse();
   }, [id]);
+
+  useEffect(() => {
+    const checkEnrollment = async () => {
+      if (user) {
+        try {
+          const { data } = await axiosInstance.get('/users/my-courses');
+          const enrolled = data.some(c => c._id === id);
+          setIsEnrolled(enrolled);
+        } catch (err) {
+          console.error("Error checking enrollment:", err);
+        }
+      }
+    };
+    
+    checkEnrollment();
+  }, [id, user]);
 
   const handleAddToCart = () => {
     if (!user) {
@@ -145,6 +167,53 @@ const CourseDetail = () => {
               </ul>
             </div>
 
+            <div>
+              <h2 className="text-2xl font-bold text-gray-800 mb-4">Course Content</h2>
+              <div className="bg-gray-50 rounded-lg border border-gray-200">
+                <div className="p-4 border-b border-gray-200">
+                  <p className="text-sm text-gray-500">
+                    {course.modules.reduce((total, module) => total + (module.lessons?.length || 0), 0)} lessons • {course.duration} hours total
+                  </p>
+                </div>
+                
+                {course.modules && course.modules.map((module, index) => (
+                  <div key={index} className="border-b border-gray-200 last:border-b-0">
+                    <div className="p-4 flex justify-between">
+                      <h3 className="font-medium">{module.title}</h3>
+                      <span className="text-sm text-gray-500">
+                        {module.lessons?.length || 0} lessons
+                      </span>
+                    </div>
+                    {module.lessons && module.lessons.slice(0, 3).map((lesson, idx) => (
+                      <div key={idx} className="px-4 py-2 text-sm flex items-center gap-2 ml-4 border-t border-gray-100">
+                        {lesson.isFree ? (
+                          <PlayCircle className="h-4 w-4 text-blue-500 flex-shrink-0" />
+                        ) : (
+                          <Lock className="h-4 w-4 text-gray-400 flex-shrink-0" />
+                        )}
+                        <span className="text-gray-700">{lesson.title}</span>
+                        {lesson.duration && (
+                          <span className="text-gray-500 text-xs ml-auto">
+                            {lesson.duration} min
+                          </span>
+                        )}
+                        {lesson.isFree && (
+                          <span className="ml-2 px-1.5 py-0.5 bg-green-100 text-green-800 text-xs rounded">
+                            Preview
+                          </span>
+                        )}
+                      </div>
+                    ))}
+                    {module.lessons && module.lessons.length > 3 && (
+                      <div className="px-4 py-2 text-sm text-gray-500 ml-4 border-t border-gray-100">
+                        + {module.lessons.length - 3} more lessons
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+
             {course.instructorBio && (
               <div>
                 <h2 className="text-2xl font-bold text-gray-800 mb-4">About the Instructor</h2>
@@ -180,27 +249,37 @@ const CourseDetail = () => {
                   )}
                 </div>
 
-                <button
-                  onClick={handleAddToCart}
-                  disabled={isInCart}
-                  className={`w-full py-3.5 rounded-xl font-semibold transition-all ${
-                    isInCart
-                      ? "bg-gradient-to-r from-gray-400 to-gray-500 cursor-not-allowed"
-                      : "bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 hover:shadow-xl"
-                  } text-white shadow-lg`}
-                >
-                  {isInCart ? (
-                    <div className="flex items-center justify-center gap-2">
-                      <CheckCircle className="h-5 w-5" />
-                      Added to Cart
-                    </div>
-                  ) : (
-                    <div className="flex items-center justify-center gap-2">
-                      <ShoppingCart className="h-5 w-5" />
-                      Add to Cart
-                    </div>
-                  )}
-                </button>
+                {isEnrolled ? (
+                  <Link
+                    to={`/courses/${id}/learn`}
+                    className="w-full py-3.5 rounded-xl font-semibold transition-all bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 hover:shadow-xl text-white shadow-lg flex items-center justify-center gap-2"
+                  >
+                    <PlayCircle className="h-5 w-5" />
+                    Start Learning
+                  </Link>
+                ) : (
+                  <button
+                    onClick={handleAddToCart}
+                    disabled={isInCart}
+                    className={`w-full py-3.5 rounded-xl font-semibold transition-all ${
+                      isInCart
+                        ? "bg-gradient-to-r from-gray-400 to-gray-500 cursor-not-allowed"
+                        : "bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 hover:shadow-xl"
+                    } text-white shadow-lg`}
+                  >
+                    {isInCart ? (
+                      <div className="flex items-center justify-center gap-2">
+                        <CheckCircle className="h-5 w-5" />
+                        Added to Cart
+                      </div>
+                    ) : (
+                      <div className="flex items-center justify-center gap-2">
+                        <ShoppingCart className="h-5 w-5" />
+                        Add to Cart
+                      </div>
+                    )}
+                  </button>
+                )}
               </div>
 
               <div className="space-y-4 pt-4 border-t border-gray-200">
