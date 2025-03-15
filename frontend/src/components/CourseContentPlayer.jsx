@@ -174,13 +174,25 @@ const CourseContentPlayer = ({ courseId, userEnrolled }) => {
             <>
               <div className="aspect-w-16 aspect-h-9 bg-black">
                 {activeLesson.videoUrl ? (
-                  <iframe
-                    src={activeLesson.videoUrl}
-                    title={activeLesson.title}
-                    allowFullScreen
-                    className="w-full h-full"
-                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                  ></iframe>
+                  activeLesson.videoUrl.startsWith('/uploads') ? (
+                    // Local video file
+                    <video 
+                      src={`${import.meta.env.VITE_API_BASE_URL}${activeLesson.videoUrl}`}
+                      title={activeLesson.title}
+                      controls
+                      className="w-full h-full"
+                      controlsList="nodownload"
+                    />
+                  ) : (
+                    // External video URL (like YouTube embed)
+                    <iframe
+                      src={activeLesson.videoUrl}
+                      title={activeLesson.title}
+                      allowFullScreen
+                      className="w-full h-full"
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                    ></iframe>
+                  )
                 ) : (
                   <div className="flex items-center justify-center h-full text-gray-400">
                     No video available for this lesson

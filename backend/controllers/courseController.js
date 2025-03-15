@@ -170,6 +170,52 @@ const updateCourseModules = async (req, res) => {
   }
 };
 
+// Upload video for a lesson
+const uploadLessonVideo = async (req, res) => {
+  try {
+    // The file will be available as req.file thanks to multer middleware
+    if (!req.file) {
+      return res.status(400).json({ message: 'No video file uploaded' });
+    }
+
+    const { courseId, moduleIndex, lessonIndex } = req.params;
+    
+    // Find the course
+    const course = await Course.findById(courseId);
+    if (!course) {
+      return res.status(404).json({ message: 'Course not found' });
+    }
+    
+    // Make sure module exists
+    if (!course.modules[moduleIndex]) {
+      return res.status(404).json({ message: 'Module not found' });
+    }
+    
+    // Make sure lesson exists
+    if (!course.modules[moduleIndex].lessons[lessonIndex]) {
+      return res.status(404).json({ message: 'Lesson not found' });
+    }
+    
+    // Get the relative path to the uploaded video
+    const videoUrl = `/uploads/videos/${req.file.filename}`;
+    
+    // Update the lesson with the video path
+    course.modules[moduleIndex].lessons[lessonIndex].videoUrl = videoUrl;
+    
+    // Save the course
+    await course.save();
+    
+    res.status(200).json({ 
+      message: 'Video uploaded successfully',
+      videoUrl: videoUrl,
+      lesson: course.modules[moduleIndex].lessons[lessonIndex]
+    });
+  } catch (error) {
+    console.error('Error uploading video:', error);
+    res.status(500).json({ message: error.message });
+  }
+};
+
 // Delete a course (Admin only)
 const deleteCourse = async (req, res) => {
   try {
@@ -191,5 +237,6 @@ module.exports = {
   getCourseById,
   updateCourse,
   updateCourseModules,
-  deleteCourse
+  deleteCourse,
+  uploadLessonVideo  // Add this
 };

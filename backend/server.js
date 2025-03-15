@@ -5,6 +5,7 @@ const connectDB = require('./config/db');
 const userRoutes = require('./routes/userRoutes');
 const courseRoutes = require('./routes/courseRoutes');
 const productRoutes = require('./routes/productRoutes');
+const path = require('path');
 
 const cartRoutes = require('./routes/cartRoutes');
 const { protect } = require('./middleware/authMiddleware');
@@ -35,6 +36,9 @@ app.use('/api/school-programs', schoolProgramRoutes);
 app.use('/api/demo', demoRoutes);
 
 app.use('/api/blogs', blogRoutes);
+
+// Add this middleware to serve static files
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 app.get('/', (req, res) => {
     res.send('API is running...');

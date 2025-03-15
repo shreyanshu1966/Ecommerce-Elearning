@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Edit, Trash2, Save, X, Plus, BookOpen, User, Clock, ChevronDown, ChevronRight, Video, Layers } from "lucide-react";
+import { Edit, Trash2, Save, X, Plus, BookOpen, User, Clock, ChevronDown, ChevronRight, Video, Layers, Upload } from "lucide-react";
 import axiosInstance from '../utils/axiosConfig';
 
 const CoursesAdmin = () => {
@@ -25,6 +25,7 @@ const CoursesAdmin = () => {
   const [currentCourseId, setCurrentCourseId] = useState(null);
   const [modulesList, setModulesList] = useState([]);
   const [expandedModules, setExpandedModules] = useState({});
+  const [uploadingVideo, setUploadingVideo] = useState({});
 
   useEffect(() => {
     fetchCourses();
@@ -238,6 +239,43 @@ const CoursesAdmin = () => {
     const updatedModules = [...modulesList];
     updatedModules[moduleIndex].lessons.splice(lessonIndex, 1);
     setModulesList(updatedModules);
+  };
+
+  const handleVideoUpload = async (moduleIndex, lessonIndex, file) => {
+    if (!currentCourseId || !file) return;
+    
+    try {
+      // Create FormData for the file upload
+      const formData = new FormData();
+      formData.append('video', file);
+      
+      // Set uploading state for this specific lesson
+      setUploadingVideo({
+        moduleIndex,
+        lessonIndex,
+        uploading: true
+      });
+      
+      // Upload the video
+      const { data } = await axiosInstance.post(
+        `/courses/${currentCourseId}/modules/${moduleIndex}/lessons/${lessonIndex}/upload-video`,
+        formData,
+        { headers: { 'Content-Type': 'multipart/form-data' } }
+      );
+      
+      // Update the lesson with new video URL
+      const updatedModules = [...modulesList];
+      updatedModules[moduleIndex].lessons[lessonIndex].videoUrl = data.videoUrl;
+      setModulesList(updatedModules);
+      
+      // Clear uploading state
+      setUploadingVideo({});
+      
+    } catch (error) {
+      console.error('Error uploading video:', error);
+      alert('Failed to upload video. Please try again.');
+      setUploadingVideo({});
+    }
   };
 
   // Main component rendering
@@ -738,14 +776,58 @@ const CoursesAdmin = () => {
                                     </div>
                                     <div className="space-y-3">
                                       <div>
-                                        <label className="block text-xs font-medium text-gray-700 mb-1">Video URL</label>
-                                        <input
-                                          type="text"
-                                          value={lesson.videoUrl}
-                                          onChange={(e) => updateLesson(moduleIndex, lessonIndex, "videoUrl", e.target.value)}
-                                          className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
-                                          placeholder="https://example.com/video.mp4"
-                                        />
+                                        <label className="block text-xs font-medium text-gray-700 mb-1">Video</label>
+                                        <div className="space-y-2">
+                                          {lesson.videoUrl && (
+                                            <div className="text-xs text-gray-500 bg-gray-50 p-2 rounded flex items-center justify-between">
+                                              <span className="truncate">{lesson.videoUrl}</span>
+                                              <button
+                                                type="button"
+                                                onClick={() => updateLesson(moduleIndex, lessonIndex, "videoUrl", "")}
+                                                className="text-red-500 hover:text-red-700"
+                                              >
+                                                &times;
+                                              </button>
+                                            </div>
+                                          )}
+
+                                          <div className="flex items-center space-x-2">
+                                            <input
+                                              type="text"
+                                              value={lesson.videoUrl}
+                                              onChange={(e) => updateLesson(moduleIndex, lessonIndex, "videoUrl", e.target.value)}
+                                              className="flex-1 px-3 py-2 border border-gray-300 rounded-md text-sm"
+                                              placeholder="External URL or upload"
+                                            />
+                                            
+                                            <label className="relative cursor-pointer bg-blue-500 text-white px-3 py-2 rounded-md hover:bg-blue-600 transition-colors">
+                                              <Upload className="h-4 w-4" />
+                                              <input 
+                                                type="file" 
+                                                className="sr-only" 
+                                                accept="video/mp4,video/webm,video/ogg"
+                                                onChange={(e) => {
+                                                  if (e.target.files?.[0]) {
+                                                    handleVideoUpload(moduleIndex, lessonIndex, e.target.files[0]);
+                                                  }
+                                                }}
+                                              />
+                                            </label>
+                                          </div>
+                                          
+                                          {uploadingVideo.moduleIndex === moduleIndex && 
+                                          uploadingVideo.lessonIndex === lessonIndex && 
+                                          uploadingVideo.uploading && (
+                                            <div className="flex items-center space-x-2 text-xs text-blue-600">
+                                              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+                                              <span>Uploading video...</span>
+                                            </div>
+                                          )}
+                                          
+                                          <p className="text-xs text-gray-500">
+                                            Max file size: 100MB. Supported formats: MP4, WebM, OGG
+                                          </p>
+                                        </div>
                                       </div>
                                       <div className="grid grid-cols-2 gap-3">
                                         <div>
