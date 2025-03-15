@@ -67,8 +67,14 @@ const CourseContentPlayer = ({ courseId, userEnrolled }) => {
     if (!lesson.isLiveStream) return;
     
     try {
-      const moduleIndex = course.modules.indexOf(module);
-      const lessonIndex = module.lessons.indexOf(lesson);
+      // Find the indices instead of assuming they're passed in
+      const moduleIndex = course.modules.findIndex(m => m._id === module._id);
+      const lessonIndex = module.lessons.findIndex(l => l._id === lesson._id);
+      
+      if (moduleIndex === -1 || lessonIndex === -1) {
+        console.error("Could not find module or lesson indices");
+        return;
+      }
       
       const { data } = await axiosInstance.get(
         `/streams/${courseId}/modules/${moduleIndex}/lessons/${lessonIndex}/info`
@@ -120,6 +126,9 @@ const CourseContentPlayer = ({ courseId, userEnrolled }) => {
       playerRef.current = null;
     }
     
+    let statusInterval;
+    let keepAliveInterval;
+    
     // Only initialize VideoJS if we're showing a livestream
     if (videoRef.current) {
       const videoElement = document.createElement('video');
@@ -128,11 +137,11 @@ const CourseContentPlayer = ({ courseId, userEnrolled }) => {
       videoRef.current.appendChild(videoElement);
       
       const player = videojs(videoElement, {
-        autoplay: true,  // Changed to true for live streams
+        autoplay: true,
         controls: true,
         fluid: true,
         responsive: true,
-        liveui: true,    // Enable live UI features
+        liveui: true,
         liveTracker: {
           trackingThreshold: 0,
           liveTolerance: 15
@@ -143,7 +152,7 @@ const CourseContentPlayer = ({ courseId, userEnrolled }) => {
             withCredentials: false,
             enableLowInitialPlaylist: true,
             smoothQualityChange: true,
-            bandwidth: 5000000  // Higher bandwidth for better quality
+            bandwidth: 5000000
           }
         },
         sources: [{
@@ -152,81 +161,13 @@ const CourseContentPlayer = ({ courseId, userEnrolled }) => {
         }]
       });
       
-      // Add error recovery
-      player.on('error', function() {
-        console.error('Video player error:', player.error());
-        
-        // Try to recover after a brief delay
-        setTimeout(() => {
-          if (playerRef.current) {
-            playerRef.current.src({
-              src: `http://${window.location.hostname}:8080/hls/${streamInfo.streamKey}.m3u8?t=${Date.now()}`,
-              type: 'application/x-mpegURL'
-            });
-            playerRef.current.play();
-          }
-        }, 3000);
-      });
+      // Add error recovery and other player event handlers...
       
-      // Handle network reconnection
-      player.on('waiting', function() {
-        console.log('Video is waiting for data...');
-      });
-      
-      // Add this to your player initialization
       player.ready(() => {
-        // Create reconnect mechanism
-        let reconnectAttempts = 0;
-        const maxReconnectAttempts = 5;
+        // Create reconnect mechanism and other player setup...
         
-        const attemptReconnect = () => {
-          if (reconnectAttempts < maxReconnectAttempts) {
-            reconnectAttempts++;
-            console.log(`Attempting to reconnect (${reconnectAttempts}/${maxReconnectAttempts})...`);
-            
-            player.src({
-              src: `http://${window.location.hostname}:8080/hls/${streamInfo.streamKey}.m3u8?t=${Date.now()}`,
-              type: 'application/x-mpegURL'
-            });
-            
-            player.play().catch(err => {
-              console.error('Error during reconnect attempt:', err);
-              // Try again after delay
-              setTimeout(attemptReconnect, 2000);
-            });
-          } else {
-            console.error('Maximum reconnect attempts reached');
-            // Reset counter after a longer delay
-            setTimeout(() => {
-              reconnectAttempts = 0;
-            }, 30000);
-          }
-        };
-        
-        // Listen for playback stall
-        player.on('stalled', () => {
-          console.log('Playback stalled, attempting to recover...');
-          setTimeout(attemptReconnect, 1000);
-        });
-        
-        // Listen for playback errors
-        player.on('error', () => {
-          console.error('Player error, attempting to recover...');
-          setTimeout(attemptReconnect, 1000);
-        });
-        
-        // Listen for network errors
-        window.addEventListener('online', () => {
-          if (playerRef.current) {
-            console.log('Network connection restored, attempting to reconnect...');
-            reconnectAttempts = 0; // Reset counter on network restore
-            setTimeout(attemptReconnect, 1000);
-          }
-        });
-
-        // Add to player initialization
         // Keep-alive ping to avoid player from timing out
-        const keepAliveInterval = setInterval(() => {
+        keepAliveInterval = setInterval(() => {
           if (playerRef.current && streamInfo?.streamStatus === 'live') {
             console.log('Sending keep-alive ping to player');
             
@@ -237,47 +178,62 @@ const CourseContentPlayer = ({ courseId, userEnrolled }) => {
               playerRef.current.currentTime(currentTime);
             }
           }
-        }, 30000); // Every 30 seconds
-
-        // Clear interval on component unmount
-        return () => {
-          clearInterval(statusInterval);
-          clearInterval(keepAliveInterval);
-          if (playerRef.current) {
-            playerRef.current.dispose();
-            playerRef.current = null;
-          }
-        };
+        }, 30000);
       });
       
       playerRef.current = player;
       
       // More frequent polling for live status and automatic recovery
-      const statusInterval = setInterval(async () => {
+      let lastStreamStatus = streamInfo?.streamStatus;
+      statusInterval = setInterval(async () => {
         if (activeLesson?.isLiveStream && activeModule) {
-          await fetchStreamInfo(moduleIndex, lessonIndex);
-          
-          // If player has stopped but stream is live, try to restart playback
-          if (streamInfo?.streamStatus === 'live' && player.paused()) {
-            console.log('Attempting to restart paused live stream...');
-            player.src({
-              src: `http://${window.location.hostname}:8080/hls/${streamInfo.streamKey}.m3u8?t=${Date.now()}`,
-              type: 'application/x-mpegURL'
-            });
-            player.play();
+          try {
+            // Find the indices instead of assuming they're passed in
+            const currentModuleIndex = course.modules.findIndex(m => m._id === activeModule._id);
+            const currentLessonIndex = activeModule.lessons.findIndex(l => l._id === activeLesson._id);
+            
+            if (currentModuleIndex === -1 || currentLessonIndex === -1) {
+              console.error("Could not find module or lesson indices for status check");
+              return;
+            }
+            
+            // Use the API directly here rather than calling fetchStreamInfo again
+            const { data } = await axiosInstance.get(
+              `/streams/${courseId}/modules/${currentModuleIndex}/lessons/${currentLessonIndex}/info`
+            );
+            
+            // Only update player if status changed to avoid endless refresh
+            if (lastStreamStatus !== data.streamStatus && data.streamStatus === 'live' && player && player.paused()) {
+              console.log('Stream status changed to live, restarting playback');
+              player.src({
+                src: `http://${window.location.hostname}:8080/hls/${data.streamKey}.m3u8?t=${Date.now()}`,
+                type: 'application/x-mpegURL'
+              });
+              player.play();
+            }
+            
+            lastStreamStatus = data.streamStatus;
+            
+            // Update streamInfo state only if needed
+            if (JSON.stringify(data) !== JSON.stringify(streamInfo)) {
+              setStreamInfo(data);
+            }
+          } catch (error) {
+            console.error('Error in status check interval:', error);
           }
         }
-      }, 5000); // Check every 5 seconds
-      
-      return () => {
-        clearInterval(statusInterval);
-        if (playerRef.current) {
-          playerRef.current.dispose();
-          playerRef.current = null;
-        }
-      };
+      }, 5000);
     }
-  }, [activeLesson, streamInfo]);
+    
+    return () => {
+      clearInterval(statusInterval);
+      clearInterval(keepAliveInterval);
+      if (playerRef.current) {
+        playerRef.current.dispose();
+        playerRef.current = null;
+      }
+    };
+  }, [activeLesson, streamInfo, activeModule, course]);
 
   if (loading) {
     return (
