@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Edit, Trash2, Save, X, Plus, BookOpen, User, Clock, ChevronDown, ChevronRight, Video, Layers, Upload } from "lucide-react";
+import { Edit, Trash2, Save, X, Plus, BookOpen, User, Clock, ChevronDown, ChevronRight, Video, Layers, Upload, Calendar, Globe, Radio } from "lucide-react";
 import axiosInstance from '../utils/axiosConfig';
 
 const CoursesAdmin = () => {
@@ -883,6 +883,142 @@ const handleVideoUpload = async (moduleIndex, lessonIndex, file) => {
                                         </div>
                                       </div>
                                     </div>
+                                  </div>
+                                  
+                                  {/* Live Stream Option */}
+                                  <div className="mt-4 border-t pt-4">
+                                    <label className="block text-xs font-medium text-gray-700 mb-2">Lesson Type</label>
+                                    <div className="flex items-center space-x-4 mb-3">
+                                      <label className="flex items-center">
+                                        <input
+                                          type="radio"
+                                          checked={!lesson.isLiveStream}
+                                          onChange={() => updateLesson(moduleIndex, lessonIndex, "isLiveStream", false)}
+                                          className="h-4 w-4 text-blue-600 border-gray-300"
+                                        />
+                                        <span className="ml-2 text-sm text-gray-700">Video Upload</span>
+                                      </label>
+                                      
+                                      <label className="flex items-center">
+                                        <input
+                                          type="radio"
+                                          checked={lesson.isLiveStream}
+                                          onChange={() => updateLesson(moduleIndex, lessonIndex, "isLiveStream", true)}
+                                          className="h-4 w-4 text-blue-600 border-gray-300"
+                                        />
+                                        <span className="ml-2 text-sm text-gray-700">Live Stream</span>
+                                      </label>
+                                    </div>
+                                    
+                                    {lesson.isLiveStream && (
+                                      <div className="space-y-4">
+                                        {/* Stream Key section */}
+                                        <div className="p-3 bg-gray-50 rounded-lg border border-gray-200">
+                                          {lesson.streamKey ? (
+                                            <>
+                                              <div className="flex items-center justify-between mb-2">
+                                                <div className="font-medium text-sm">Stream Key</div>
+                                                <div className={`text-xs px-2 py-1 rounded-full ${
+                                                  lesson.streamStatus === 'live' 
+                                                    ? 'bg-green-100 text-green-800' 
+                                                    : 'bg-gray-100 text-gray-800'
+                                                }`}>
+                                                  {lesson.streamStatus === 'live' ? 'LIVE' : 'Offline'}
+                                                </div>
+                                              </div>
+                                              <div className="flex items-center">
+                                                <input
+                                                  type="password"
+                                                  value={lesson.streamKey}
+                                                  readOnly
+                                                  className="text-xs bg-gray-100 border border-gray-300 rounded px-2 py-1 flex-grow"
+                                                />
+                                                <button
+                                                  type="button"
+                                                  onClick={() => {
+                                                    navigator.clipboard.writeText(lesson.streamKey);
+                                                    alert('Stream key copied to clipboard');
+                                                  }}
+                                                  className="ml-2 px-2 py-1 bg-blue-500 text-white text-xs rounded hover:bg-blue-600"
+                                                >
+                                                  Copy
+                                                </button>
+                                              </div>
+                                              <div className="mt-2 text-xs text-gray-500">
+                                                RTMP URL: rtmp://{window.location.hostname}:1935/live
+                                              </div>
+                                              <div className="mt-1 text-xs text-gray-500">
+                                                Stream Key: {lesson.streamKey} (Keep this private)
+                                              </div>
+                                            </>
+                                          ) : (
+                                            <div className="text-center py-2">
+                                              <button
+                                                type="button"
+                                                onClick={async () => {
+                                                  try {
+                                                    const { data } = await axiosInstance.post(
+                                                      `/streams/${currentCourseId}/modules/${moduleIndex}/lessons/${lessonIndex}/generate-key`
+                                                    );
+                                                    // Update the lesson with stream key
+                                                    const updatedModules = [...modulesList];
+                                                    updatedModules[moduleIndex].lessons[lessonIndex].streamKey = data.streamKey;
+                                                    setModulesList(updatedModules);
+                                                  } catch (error) {
+                                                    console.error('Error generating stream key:', error);
+                                                    alert('Failed to generate stream key');
+                                                  }
+                                                }}
+                                                className="px-3 py-1 bg-blue-500 text-white text-sm rounded flex items-center gap-1 mx-auto hover:bg-blue-600"
+                                              >
+                                                <Radio className="h-3 w-3" />
+                                                Generate Stream Key
+                                              </button>
+                                            </div>
+                                          )}
+                                        </div>
+                                        
+                                        {/* Schedule Stream */}
+                                        <div>
+                                          <label className="block text-xs font-medium text-gray-700 mb-2 flex items-center gap-1">
+                                            <Calendar className="h-3 w-3" />
+                                            Schedule Stream (Optional)
+                                          </label>
+                                          <input
+                                            type="datetime-local"
+                                            value={lesson.scheduledStartTime ? new Date(lesson.scheduledStartTime).toISOString().slice(0, 16) : ''}
+                                            onChange={async (e) => {
+                                              // Update lesson locally
+                                              const updatedModules = [...modulesList];
+                                              updatedModules[moduleIndex].lessons[lessonIndex].scheduledStartTime = e.target.value;
+                                              setModulesList(updatedModules);
+                                              
+                                              // Save to server
+                                              try {
+                                                await axiosInstance.post(
+                                                  `/streams/${currentCourseId}/modules/${moduleIndex}/lessons/${lessonIndex}/schedule`,
+                                                  { scheduledStartTime: e.target.value }
+                                                );
+                                              } catch (error) {
+                                                console.error('Error scheduling stream:', error);
+                                              }
+                                            }}
+                                            className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+                                          />
+                                        </div>
+                                        
+                                        <div className="bg-blue-50 p-3 rounded-md text-xs text-blue-800">
+                                          <div className="font-medium mb-1">How to stream:</div>
+                                          <ol className="list-decimal list-inside space-y-1">
+                                            <li>Use OBS Studio or similar software</li>
+                                            <li>Set up "Custom" streaming service</li>
+                                            <li>Enter RTMP URL and Stream Key</li>
+                                            <li>Configure your video/audio sources</li>
+                                            <li>Click "Start Streaming" in OBS</li>
+                                          </ol>
+                                        </div>
+                                      </div>
+                                    )}
                                   </div>
                                 </div>
                               ))}

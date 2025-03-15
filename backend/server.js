@@ -12,7 +12,7 @@ const { protect } = require('./middleware/authMiddleware');
 const schoolProgramRoutes = require('./routes/schoolProgramRoutes');
 const demoRoutes = require('./routes/demoRoutes');
 const blogRoutes = require('./routes/blogRoutes');
-
+const streamRoutes = require('./routes/streamRoutes');
 
 
 dotenv.config();
@@ -36,6 +36,8 @@ app.use('/api/school-programs', schoolProgramRoutes);
 app.use('/api/demo', demoRoutes);
 
 app.use('/api/blogs', blogRoutes);
+
+app.use('/api/streams', streamRoutes);
 
 // Add this middleware to serve static files
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));

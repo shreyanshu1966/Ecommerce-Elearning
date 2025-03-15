@@ -24,6 +24,24 @@ const lessonSchema = new mongoose.Schema({
   isFree: {
     type: Boolean,
     default: false
+  },
+  // New fields for live streaming
+  isLiveStream: {
+    type: Boolean,
+    default: false
+  },
+  streamKey: {
+    type: String,
+    default: ''
+  },
+  streamStatus: {
+    type: String,
+    enum: ['offline', 'live', 'ended'],
+    default: 'offline'
+  },
+  scheduledStartTime: {
+    type: Date,
+    default: null
   }
 });
 
