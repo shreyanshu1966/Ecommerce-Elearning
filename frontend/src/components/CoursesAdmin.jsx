@@ -241,42 +241,71 @@ const CoursesAdmin = () => {
     setModulesList(updatedModules);
   };
 
-  const handleVideoUpload = async (moduleIndex, lessonIndex, file) => {
-    if (!currentCourseId || !file) return;
+  // Improve the handleVideoUpload function with progress tracking
+const handleVideoUpload = async (moduleIndex, lessonIndex, file) => {
+  if (!currentCourseId || !file) return;
+  
+  // Validate file size before upload
+  if (file.size > 100 * 1024 * 1024) { // 100 MB
+    alert("File too large. Maximum size is 100MB.");
+    return;
+  }
+  
+  // Check file type
+  const validTypes = ['video/mp4', 'video/webm', 'video/ogg', 'video/quicktime'];
+  if (!validTypes.includes(file.type)) {
+    alert("Invalid file type. Only MP4, WebM, OGG and QuickTime formats are allowed.");
+    return;
+  }
+  
+  try {
+    // Create FormData for the file upload
+    const formData = new FormData();
+    formData.append('video', file);
     
-    try {
-      // Create FormData for the file upload
-      const formData = new FormData();
-      formData.append('video', file);
-      
-      // Set uploading state for this specific lesson
-      setUploadingVideo({
-        moduleIndex,
-        lessonIndex,
-        uploading: true
-      });
-      
-      // Upload the video
-      const { data } = await axiosInstance.post(
-        `/courses/${currentCourseId}/modules/${moduleIndex}/lessons/${lessonIndex}/upload-video`,
-        formData,
-        { headers: { 'Content-Type': 'multipart/form-data' } }
-      );
-      
-      // Update the lesson with new video URL
-      const updatedModules = [...modulesList];
-      updatedModules[moduleIndex].lessons[lessonIndex].videoUrl = data.videoUrl;
-      setModulesList(updatedModules);
-      
-      // Clear uploading state
-      setUploadingVideo({});
-      
-    } catch (error) {
-      console.error('Error uploading video:', error);
-      alert('Failed to upload video. Please try again.');
-      setUploadingVideo({});
+    // Set uploading state for this specific lesson
+    setUploadingVideo({
+      moduleIndex,
+      lessonIndex,
+      uploading: true,
+      progress: 0
+    });
+    
+    // Upload the video with progress tracking
+    const { data } = await axiosInstance.post(
+      `/courses/${currentCourseId}/modules/${moduleIndex}/lessons/${lessonIndex}/upload-video`,
+      formData,
+      { 
+        headers: { 'Content-Type': 'multipart/form-data' },
+        onUploadProgress: (progressEvent) => {
+          const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+          setUploadingVideo(prev => ({
+            ...prev,
+            progress: percentCompleted
+          }));
+        }
+      }
+    );
+    
+    // Update the lesson with new video URL and thumbnail if available
+    const updatedModules = [...modulesList];
+    updatedModules[moduleIndex].lessons[lessonIndex].videoUrl = data.videoUrl;
+    if (data.thumbnailUrl) {
+    updatedModules[moduleIndex].lessons[lessonIndex].thumbnailUrl = data.thumbnailUrl;
     }
-  };
+    setModulesList(updatedModules);
+    
+    // Clear uploading state after a short delay for better UX
+    setTimeout(() => {
+    setUploadingVideo({});
+    }, 1000);
+    
+  } catch (error) {
+    console.error('Error uploading video:', error);
+    alert(`Failed to upload video: ${error.response?.data?.message || error.message}`);
+    setUploadingVideo({});
+  }
+};
 
   // Main component rendering
   return (

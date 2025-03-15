@@ -13,6 +13,10 @@ const lessonSchema = new mongoose.Schema({
     type: String,
     default: ''
   },
+  thumbnailUrl: {
+    type: String,
+    default: ''
+  },
   duration: {
     type: Number, // in minutes
     default: 0

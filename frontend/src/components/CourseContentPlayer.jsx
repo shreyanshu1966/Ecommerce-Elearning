@@ -175,27 +175,47 @@ const CourseContentPlayer = ({ courseId, userEnrolled }) => {
               <div className="aspect-w-16 aspect-h-9 bg-black">
                 {activeLesson.videoUrl ? (
                   activeLesson.videoUrl.startsWith('/uploads') ? (
-                    // Local video file
-                    <video 
-                      src={`${import.meta.env.VITE_API_BASE_URL}${activeLesson.videoUrl}`}
-                      title={activeLesson.title}
-                      controls
-                      className="w-full h-full"
-                      controlsList="nodownload"
-                    />
+                    // Local video file with improved player
+                    <div className="w-full h-full relative">
+                      <video 
+                        src={`${import.meta.env.VITE_API_BASE_URL}${activeLesson.videoUrl}`}
+                        title={activeLesson.title}
+                        controls
+                        controlsList="nodownload"
+                        className="w-full h-full rounded-md"
+                        poster={`${import.meta.env.VITE_API_BASE_URL}/uploads/thumbnails/default-video-thumb.jpg`}
+                        preload="metadata"
+                        onError={(e) => {
+                          console.error("Video error:", e);
+                          e.target.onerror = null;
+                          e.target.src = ""; 
+                          e.target.parentElement.innerHTML = `
+                            <div class="flex flex-col items-center justify-center h-full text-gray-400 bg-gray-100 rounded-md">
+                              <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                              </svg>
+                              <p>Error loading video</p>
+                            </div>
+                          `;
+                        }}
+                      />
+                    </div>
                   ) : (
                     // External video URL (like YouTube embed)
                     <iframe
                       src={activeLesson.videoUrl}
                       title={activeLesson.title}
                       allowFullScreen
-                      className="w-full h-full"
+                      className="w-full h-full rounded-md"
                       allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                     ></iframe>
                   )
                 ) : (
-                  <div className="flex items-center justify-center h-full text-gray-400">
-                    No video available for this lesson
+                  <div className="flex flex-col items-center justify-center h-full text-gray-400 bg-gray-100 rounded-md">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                    </svg>
+                    <p>No video available for this lesson</p>
                   </div>
                 )}
               </div>

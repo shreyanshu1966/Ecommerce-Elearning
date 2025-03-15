@@ -1,4 +1,6 @@
 const Course = require('../models/Course');
+// Import the thumbnail generator
+const { generateThumbnail } = require('../utils/thumbnailGenerator');
 
 // Create a new course (Admin only)
 const createCourse = async (req, res) => {
@@ -195,19 +197,38 @@ const uploadLessonVideo = async (req, res) => {
     if (!course.modules[moduleIndex].lessons[lessonIndex]) {
       return res.status(404).json({ message: 'Lesson not found' });
     }
-    
-    // Get the relative path to the uploaded video
+
+    // Get the video details
+    const videoPath = req.file.path;
     const videoUrl = `/uploads/videos/${req.file.filename}`;
+    
+    // Generate thumbnail (if ffmpeg is installed)
+    let thumbnailUrl = null;
+    try {
+      thumbnailUrl = await generateThumbnail(
+        videoPath, 
+        req.generatedFilename || `thumbnail-${Date.now()}`
+      );
+    } catch (err) {
+      console.error('Error generating thumbnail:', err);
+      // Continue without thumbnail if generation fails
+    }
     
     // Update the lesson with the video path
     course.modules[moduleIndex].lessons[lessonIndex].videoUrl = videoUrl;
+    
+    // Add thumbnail URL if available
+    if (thumbnailUrl) {
+      course.modules[moduleIndex].lessons[lessonIndex].thumbnailUrl = thumbnailUrl;
+    }
     
     // Save the course
     await course.save();
     
     res.status(200).json({ 
       message: 'Video uploaded successfully',
-      videoUrl: videoUrl,
+      videoUrl,
+      thumbnailUrl,
       lesson: course.modules[moduleIndex].lessons[lessonIndex]
     });
   } catch (error) {
