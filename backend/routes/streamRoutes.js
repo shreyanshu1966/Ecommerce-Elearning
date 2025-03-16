@@ -4,7 +4,8 @@ const {
   generateStreamKey, 
   updateStreamStatus, 
   getStreamInfo,
-  scheduleStream
+  scheduleStream,
+  controlStreamStatus
 } = require('../controllers/streamController');
 const { protect, admin } = require('../middleware/authMiddleware');
 
@@ -19,5 +20,8 @@ router.get('/:courseId/modules/:moduleIndex/lessons/:lessonIndex/info', getStrea
 
 // Schedule a live stream
 router.post('/:courseId/modules/:moduleIndex/lessons/:lessonIndex/schedule', protect, admin, scheduleStream);
+
+// Manually control stream status
+router.post('/:courseId/modules/:moduleIndex/lessons/:lessonIndex/control', protect, admin, controlStreamStatus);
 
 module.exports = router;

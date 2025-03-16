@@ -27,6 +27,7 @@ import Blogs from "./pages/Blogs";
 import LoadingScreen from "./components/LoadingScreen";
 import NotFound from "./components/NotFound";
 import Checkout from "./pages/Checkout";
+import { ToastContainer } from 'react-toastify';
 
 // Import admin components directly instead of lazy loading
 import OrderDetailAdmin from "./components/OrderDetailAdmin";
@@ -110,6 +111,7 @@ const App = () => {
             <Route path="*" element={<NotFound />} />
           </Routes>
         </Suspense>
+        <ToastContainer position="top-right" autoClose={3000} />
       </Router>
     </Provider>
   );

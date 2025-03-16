@@ -36,7 +36,7 @@ const lessonSchema = new mongoose.Schema({
   },
   streamStatus: {
     type: String,
-    enum: ['offline', 'live', 'ended'],
+    enum: ['starting', 'live', 'offline', 'ended'],
     default: 'offline'
   },
   scheduledStartTime: {

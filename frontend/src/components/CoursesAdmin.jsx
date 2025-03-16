@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { Edit, Trash2, Save, X, Plus, BookOpen, User, Clock, ChevronDown, ChevronRight, Video, Layers, Upload, Calendar, Globe, Radio } from "lucide-react";
 import axiosInstance from '../utils/axiosConfig';
+import { toast } from 'react-toastify';
 
 const CoursesAdmin = () => {
   const [courses, setCourses] = useState([]);
@@ -949,6 +950,62 @@ const handleVideoUpload = async (moduleIndex, lessonIndex, file) => {
                                               </div>
                                               <div className="mt-1 text-xs text-gray-500">
                                                 Stream Key: {lesson.streamKey} (Keep this private)
+                                              </div>
+                                              
+                                              {/* Add stream control buttons */}
+                                              <div className="mt-3 flex space-x-2">
+                                                <button
+                                                  type="button"
+                                                  className={`px-3 py-1 text-xs font-medium rounded-md ${
+                                                    lesson.streamStatus === 'starting' || lesson.streamStatus === 'live'
+                                                      ? 'bg-red-100 text-red-700 hover:bg-red-200'
+                                                      : 'bg-green-100 text-green-700 hover:bg-green-200'
+                                                  }`}
+                                                  onClick={async () => {
+                                                    try {
+                                                      let newStatus;
+                                                      if (lesson.streamStatus === 'starting' || lesson.streamStatus === 'live') {
+                                                        newStatus = 'ended';
+                                                      } else {
+                                                        newStatus = 'starting';
+                                                      }
+                                                      
+                                                      const { data } = await axiosInstance.post(
+                                                        `/streams/${currentCourseId}/modules/${moduleIndex}/lessons/${lessonIndex}/control`,
+                                                        { status: newStatus }
+                                                      );
+                                                      
+                                                      // Update the lesson with new status
+                                                      const updatedModules = [...modulesList];
+                                                      updatedModules[moduleIndex].lessons[lessonIndex].streamStatus = newStatus;
+                                                      setModulesList(updatedModules);
+                                                      
+                                                      toast.success(`Stream ${newStatus === 'starting' ? 'started' : 'ended'} successfully`);
+                                                    } catch (error) {
+                                                      console.error('Error controlling stream:', error);
+                                                      toast.error('Failed to control stream: ' + (error.response?.data?.message || 'Unknown error'));
+                                                    }
+                                                  }}
+                                                >
+                                                  {lesson.streamStatus === 'starting' || lesson.streamStatus === 'live'
+                                                    ? 'End Stream'
+                                                    : 'Start Stream'}
+                                                </button>
+                                                
+                                                <div className="px-3 py-1 text-xs rounded-md bg-gray-100 flex items-center">
+                                                  Status: 
+                                                  <span className={`ml-1 font-medium ${
+                                                    lesson.streamStatus === 'live' ? 'text-red-600' :
+                                                    lesson.streamStatus === 'starting' ? 'text-yellow-600' :
+                                                    lesson.streamStatus === 'ended' ? 'text-gray-600' :
+                                                    'text-blue-600'
+                                                  }`}>
+                                                    {lesson.streamStatus === 'live' ? 'Live' :
+                                                     lesson.streamStatus === 'starting' ? 'Starting soon' :
+                                                     lesson.streamStatus === 'ended' ? 'Ended' :
+                                                     'Offline'}
+                                                  </span>
+                                                </div>
                                               </div>
                                             </>
                                           ) : (

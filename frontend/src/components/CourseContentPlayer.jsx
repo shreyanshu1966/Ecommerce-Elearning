@@ -62,12 +62,12 @@ const CourseContentPlayer = ({ courseId, userEnrolled }) => {
     }));
   };
 
-  // Add or update the fetchStreamInfo function
+  // Update fetchStreamInfo to handle different stream statuses
   const fetchStreamInfo = async (module, lesson) => {
     if (!lesson.isLiveStream) return;
     
     try {
-      // Find the indices instead of assuming they're passed in
+      // Find the indices
       const moduleIndex = course.modules.findIndex(m => m._id === module._id);
       const lessonIndex = module.lessons.findIndex(l => l._id === lesson._id);
       
@@ -96,6 +96,10 @@ const CourseContentPlayer = ({ courseId, userEnrolled }) => {
           type: 'application/x-mpegURL'
         });
         playerRef.current.play();
+      } else if (statusChanged && data.streamStatus !== 'live' && playerRef.current) {
+        // If stream is not live anymore, reset player
+        console.log('Stream is no longer live, resetting player');
+        playerRef.current.reset();
       }
     } catch (error) {
       console.error('Error fetching stream info:', error);
@@ -202,19 +206,25 @@ const CourseContentPlayer = ({ courseId, userEnrolled }) => {
               `/streams/${courseId}/modules/${currentModuleIndex}/lessons/${currentLessonIndex}/info`
             );
             
-            // Only update player if status changed to avoid endless refresh
-            if (lastStreamStatus !== data.streamStatus && data.streamStatus === 'live' && player && player.paused()) {
-              console.log('Stream status changed to live, restarting playback');
-              player.src({
-                src: `http://${window.location.hostname}:8080/hls/${data.streamKey}.m3u8?t=${Date.now()}`,
-                type: 'application/x-mpegURL'
-              });
-              player.play();
+            // Update the UI based on new status changes
+            if (lastStreamStatus !== data.streamStatus) {
+              console.log(`Stream status changed from ${lastStreamStatus} to ${data.streamStatus}`);
+              
+              if (data.streamStatus === 'live' && player && player.paused()) {
+                console.log('Stream is now live, restarting playback');
+                player.src({
+                  src: `http://${window.location.hostname}:8080/hls/${data.streamKey}.m3u8?t=${Date.now()}`,
+                  type: 'application/x-mpegURL'
+                });
+                player.play();
+              } else if (data.streamStatus !== 'live' && player) {
+                console.log('Stream is no longer live');
+              }
             }
             
             lastStreamStatus = data.streamStatus;
             
-            // Update streamInfo state only if needed
+            // Update streamInfo state
             if (JSON.stringify(data) !== JSON.stringify(streamInfo)) {
               setStreamInfo(data);
             }
@@ -318,6 +328,9 @@ const CourseContentPlayer = ({ courseId, userEnrolled }) => {
                             {lesson.isLiveStream && lesson.streamStatus === 'live' && (
                               <span className="ml-2 px-1.5 py-0.5 text-xs bg-red-100 text-red-800 rounded-full">LIVE</span>
                             )}
+                            {lesson.isLiveStream && lesson.streamStatus === 'starting' && (
+                              <span className="ml-2 px-1.5 py-0.5 text-xs bg-yellow-100 text-yellow-800 rounded-full">STARTING</span>
+                            )}
                           </span>
                         </div>
                         
@@ -349,14 +362,23 @@ const CourseContentPlayer = ({ courseId, userEnrolled }) => {
                   <div className="w-full h-full relative" ref={videoRef}>
                     {streamInfo?.streamStatus !== 'live' ? (
                       <div className="absolute inset-0 flex flex-col items-center justify-center bg-gray-800 text-white">
-                        <Radio className="h-12 w-12 mb-3" />
-                        <h3 className="text-lg font-medium">
-                          {streamInfo?.scheduledStartTime 
-                            ? `Stream scheduled for ${new Date(streamInfo.scheduledStartTime).toLocaleString()}` 
-                            : 'Stream is currently offline'}
+                        <Radio className={`h-12 w-12 mb-3 ${
+                          streamInfo?.streamStatus === 'starting' ? 'text-yellow-400 animate-pulse' : 'text-white'
+                        }`} />
+                        <h3 className="text-lg font-medium text-center px-4">
+                          {streamInfo?.streamStatus === 'starting' 
+                            ? 'Stream is starting soon...' 
+                            : streamInfo?.streamStatus === 'ended'
+                            ? 'This live stream has ended'
+                            : streamInfo?.scheduledStartTime 
+                              ? `Stream scheduled for ${new Date(streamInfo.scheduledStartTime).toLocaleString()}` 
+                              : 'Stream is currently offline'}
                         </h3>
+                        {streamInfo?.streamStatus === 'starting' && (
+                          <p className="mt-2 text-yellow-300">Please wait, the instructor is setting up</p>
+                        )}
                         {streamInfo?.streamStatus === 'ended' && (
-                          <p className="mt-2 text-gray-300">This live stream has ended</p>
+                          <p className="mt-2 text-gray-300">Thanks for watching!</p>
                         )}
                       </div>
                     ) : (

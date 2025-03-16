@@ -154,9 +154,43 @@ const scheduleStream = async (req, res) => {
   }
 };
 
+// Manually control stream status
+const controlStreamStatus = async (req, res) => {
+  try {
+    const { courseId, moduleIndex, lessonIndex } = req.params;
+    const { status } = req.body; // status can be 'starting', 'live', 'offline', 'ended'
+    
+    if (!['starting', 'live', 'offline', 'ended'].includes(status)) {
+      return res.status(400).json({ message: 'Invalid status value' });
+    }
+    
+    const course = await Course.findById(courseId);
+    if (!course) {
+      return res.status(404).json({ message: 'Course not found' });
+    }
+    
+    if (!course.modules[moduleIndex] || !course.modules[moduleIndex].lessons[lessonIndex]) {
+      return res.status(404).json({ message: 'Lesson not found' });
+    }
+    
+    // Update the lesson stream status
+    course.modules[moduleIndex].lessons[lessonIndex].streamStatus = status;
+    await course.save();
+    
+    return res.status(200).json({ 
+      message: 'Stream status updated successfully',
+      streamStatus: status
+    });
+  } catch (error) {
+    console.error('Error in controlStreamStatus:', error);
+    return res.status(500).json({ message: error.message });
+  }
+};
+
 module.exports = {
   generateStreamKey,
   updateStreamStatus,
   getStreamInfo,
-  scheduleStream
+  scheduleStream,
+  controlStreamStatus // Export the new function
 };
