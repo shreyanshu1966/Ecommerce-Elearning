@@ -48,9 +48,12 @@ const updateStreamStatus = async (req, res) => {
     
     // Determine if stream is starting or ending
     // If it's a 'publish_done' call type, the stream is ending
-    const status = (req.body.call_type === 'publish_done' || req.query.call_type === 'publish_done') 
-                  ? 'offline' 
-                  : 'live';
+    let status;
+    if (req.body.call_type === 'publish_done' || req.query.call_type === 'publish_done') {
+      status = 'offline';
+    } else {
+      status = 'preview';
+    }
     
     console.log(`Stream ${streamKey} status update: ${status}`);
     
@@ -173,6 +176,21 @@ const controlStreamStatus = async (req, res) => {
       return res.status(404).json({ message: 'Lesson not found' });
     }
     
+    const currentStatus = course.modules[moduleIndex].lessons[lessonIndex].streamStatus;
+    
+    // Add validation logic for status transitions
+    if (status === 'live' && currentStatus !== 'starting') {
+      return res.status(400).json({ 
+        message: 'Stream must be in "starting" status before it can go live' 
+      });
+    }
+    
+    if (status === 'starting' && currentStatus === 'live') {
+      return res.status(400).json({ 
+        message: 'Cannot change status to "starting" when stream is already live' 
+      });
+    }
+    
     // Update the lesson stream status
     course.modules[moduleIndex].lessons[lessonIndex].streamStatus = status;
     await course.save();
@@ -187,10 +205,43 @@ const controlStreamStatus = async (req, res) => {
   }
 };
 
+// Get preview stream URL for admin
+const getStreamPreview = async (req, res) => {
+  try {
+    const { courseId, moduleIndex, lessonIndex } = req.params;
+    
+    const course = await Course.findById(courseId);
+    if (!course) {
+      return res.status(404).json({ message: 'Course not found' });
+    }
+    
+    if (!course.modules[moduleIndex] || !course.modules[moduleIndex].lessons[lessonIndex]) {
+      return res.status(404).json({ message: 'Lesson not found' });
+    }
+    
+    const lesson = course.modules[moduleIndex].lessons[lessonIndex];
+    
+    if (!lesson.isLiveStream || !lesson.streamKey) {
+      return res.status(400).json({ message: 'This lesson is not configured for live streaming' });
+    }
+    
+    res.json({
+      isLiveStream: lesson.isLiveStream,
+      streamKey: lesson.streamKey,
+      streamStatus: lesson.streamStatus,
+      scheduledStartTime: lesson.scheduledStartTime,
+      previewUrl: `http://${req.get('host').split(':')[0]}:8080/hls/${lesson.streamKey}.m3u8?t=${Date.now()}`
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
 module.exports = {
   generateStreamKey,
   updateStreamStatus,
   getStreamInfo,
   scheduleStream,
-  controlStreamStatus // Export the new function
+  controlStreamStatus,
+  getStreamPreview
 };

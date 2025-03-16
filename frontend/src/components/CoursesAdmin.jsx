@@ -1,7 +1,9 @@
-import { useState, useEffect } from "react";
-import { Edit, Trash2, Save, X, Plus, BookOpen, User, Clock, ChevronDown, ChevronRight, Video, Layers, Upload, Calendar, Globe, Radio } from "lucide-react";
+import { useState, useEffect, useRef, useCallback } from "react";
+import { Edit, Trash2, Save, X, Plus, BookOpen, User, Clock, ChevronDown, ChevronRight, Video, Layers, Upload, Calendar, Globe, Radio, RefreshCw, Eye } from "lucide-react";
 import axiosInstance from '../utils/axiosConfig';
 import { toast } from 'react-toastify';
+import videojs from 'video.js';
+import 'video.js/dist/video-js.css';
 
 const CoursesAdmin = () => {
   const [courses, setCourses] = useState([]);
@@ -27,6 +29,9 @@ const CoursesAdmin = () => {
   const [modulesList, setModulesList] = useState([]);
   const [expandedModules, setExpandedModules] = useState({});
   const [uploadingVideo, setUploadingVideo] = useState({});
+  const [showPreview, setShowPreview] = useState(false);
+  const [previewStreamKey, setPreviewStreamKey] = useState(null);
+  const [streamCheckInterval, setStreamCheckInterval] = useState(null);
 
   useEffect(() => {
     fetchCourses();
@@ -307,6 +312,418 @@ const handleVideoUpload = async (moduleIndex, lessonIndex, file) => {
     setUploadingVideo({});
   }
 };
+
+// Replace your current StreamPreview component with this version
+const StreamPreview = ({ streamKey, onClose }) => {
+  const videoRef = useRef(null);
+  const playerRef = useRef(null);
+  const [error, setError] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [retryCount, setRetryCount] = useState(0);
+  const [streamInfo, setStreamInfo] = useState(null);
+  
+  // Create player safely
+  const initPlayer = useCallback(() => {
+    if (!streamKey || !videoRef.current) return null;
+    
+    // Safe cleanup of any existing player
+    if (playerRef.current) {
+      try {
+        playerRef.current.dispose();
+      } catch (err) {
+        console.error('Error disposing player:', err);
+      }
+      playerRef.current = null;
+    }
+    
+    setError(false);
+    setIsLoading(true);
+    
+    try {
+      // Create video element directly without using innerHTML
+      const videoContainer = videoRef.current;
+      // Clear any existing children safely
+      while (videoContainer && videoContainer.firstChild) {
+        videoContainer.removeChild(videoContainer.firstChild);
+      }
+      
+      const videoElement = document.createElement('video');
+      videoElement.className = 'video-js vjs-big-play-centered vjs-theme-fantasy';
+      // Set explicit dimensions to ensure proper rendering
+      videoElement.style.width = '100%';
+      videoElement.style.height = '100%';
+      videoContainer.appendChild(videoElement);
+      
+      // Initialize Video.js with improved settings
+      const player = videojs(videoElement, {
+        autoplay: true,
+        controls: true,
+        fluid: false, // Change to false when using explicit container
+        fill: true, // Make player fill the container
+        responsive: true,
+        liveui: true,
+        playbackRates: [0.5, 1, 1.5, 2],
+        controlBar: {
+          pictureInPictureToggle: false,
+          fullscreenToggle: true,
+        },
+        sources: [{
+          src: `http://${window.location.hostname}:8080/hls/${streamKey}.m3u8?t=${Date.now()}`,
+          type: 'application/x-mpegURL'
+        }],
+        html5: {
+          vhs: {
+            overrideNative: true,
+            enableLowInitialPlaylist: true,
+          }
+        }
+      });
+      
+      // Force player dimensions after initialization
+      setTimeout(() => {
+        if (player) {
+          player.dimensions('100%', '100%');
+        }
+      }, 100);
+
+      // Set up event handlers with more detailed logging
+      player.on('error', () => {
+        console.warn('Video player error occurred:', player.error());
+        setError(true);
+        setIsLoading(false);
+      });
+      
+      player.on('loadeddata', () => {
+        setIsLoading(false);
+        
+        // Try to extract stream information
+        try {
+          const streamWidth = player.videoWidth();
+          const streamHeight = player.videoHeight();
+          const currentSrc = player.currentSource();
+          
+          setStreamInfo({
+            resolution: streamWidth && streamHeight ? `${streamWidth}×${streamHeight}` : 'Unknown',
+            format: currentSrc?.type || 'HLS Stream',
+          });
+        } catch (err) {
+          console.error('Error getting stream info:', err);
+        }
+      });
+      
+      // Set up timeout for loading detection
+      const timeoutId = setTimeout(() => {
+        if (isLoading) {
+          setError(true);
+          setIsLoading(false);
+        }
+      }, 10000);
+      
+      playerRef.current = player;
+      
+      // Return cleanup function
+      return () => {
+        clearTimeout(timeoutId);
+      };
+    } catch (err) {
+      console.error('Error initializing player:', err);
+      setError(true);
+      setIsLoading(false);
+      return null;
+    }
+  }, [streamKey]);
+  
+  // Initialize player on mount
+  useEffect(() => {
+    const cleanupFunc = initPlayer();
+    
+    // Cleanup on unmount
+    return () => {
+      if (cleanupFunc) cleanupFunc();
+      
+      if (playerRef.current) {
+        try {
+          const player = playerRef.current;
+          playerRef.current = null;
+          player.dispose();
+        } catch (err) {
+          console.error('Error disposing player on unmount:', err);
+        }
+      }
+    };
+  }, [initPlayer]);
+  
+  // Same retry logic as before...
+  useEffect(() => {
+    let retryTimer;
+    if (error && retryCount < 2) {
+      retryTimer = setTimeout(() => {
+        setRetryCount(count => count + 1);
+        initPlayer();
+      }, 5000);
+    }
+    
+    return () => {
+      if (retryTimer) clearTimeout(retryTimer);
+    };
+  }, [error, retryCount, initPlayer]);
+  
+  return (
+    <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4 md:p-8 animate-fadeIn">
+      <div className="bg-white rounded-xl w-full max-w-4xl shadow-2xl overflow-hidden">
+        <div className="flex items-center justify-between p-4 border-b">
+          <div className="flex items-center">
+            <Radio className="h-5 w-5 text-blue-500 mr-2" />
+            <h3 className="font-semibold text-gray-800">Stream Preview</h3>
+            {streamInfo && (
+              <span className="ml-2 text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full">
+                {streamInfo.resolution}
+              </span>
+            )}
+          </div>
+          
+          <button 
+            onClick={() => {
+              if (playerRef.current) {
+                try {
+                  playerRef.current.dispose();
+                  playerRef.current = null;
+                } catch (err) {
+                  console.error('Error during manual cleanup:', err);
+                }
+              }
+              onClose();
+            }}
+            className="p-1.5 rounded-full hover:bg-gray-100 transition-colors"
+            aria-label="Close"
+          >
+            <X className="h-5 w-5 text-gray-500" />
+          </button>
+        </div>
+        
+        {/* Fixed aspect ratio container with proper styling */}
+        <div className="relative w-full pb-[56.25%] bg-black">
+          <div ref={videoRef} className="absolute inset-0 w-full h-full"></div>
+          
+          {isLoading && !error && (
+            <div className="absolute inset-0 bg-black/50 flex flex-col items-center justify-center">
+              <div className="animate-spin rounded-full h-14 w-14 border-4 border-white border-t-transparent mb-3"></div>
+              <p className="text-white text-sm">Connecting to stream...</p>
+            </div>
+          )}
+          
+          {error && (
+            <div className="absolute inset-0 bg-gray-900 flex flex-col items-center justify-center p-6 text-center">
+              <div className="bg-red-100 text-red-500 p-3 rounded-full mb-4">
+                <X className="h-8 w-8" />
+              </div>
+              <h4 className="text-xl font-bold text-white mb-2">Stream Not Available</h4>
+              <p className="text-gray-300 mb-6 max-w-md">
+                The stream may not be active or there might be network connectivity issues.
+              </p>
+              <div className="space-y-4 w-full max-w-md">
+                <div className="bg-gray-800/50 p-3 rounded-lg">
+                  <h5 className="text-sm font-medium text-white mb-2">Troubleshooting Tips:</h5>
+                  <ul className="text-sm text-gray-300 list-disc list-inside space-y-1">
+                    <li>Ensure OBS is actively streaming with the correct stream key</li>
+                    <li>Check that your streaming software shows "Stream Active" status</li>
+                    <li>Verify your network connection is stable</li>
+                    <li>Try a lower bitrate in your streaming software</li>
+                  </ul>
+                </div>
+                <button 
+                  onClick={() => {
+                    setRetryCount(count => count + 1);
+                    initPlayer();
+                  }}
+                  className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium flex items-center justify-center gap-2 w-full max-w-xs mx-auto transition-colors"
+                >
+                  <RefreshCw className="h-4 w-4 animate-spin-slow" /> 
+                  Try Again
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+        
+        <div className="p-4 bg-gray-50 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+          <div className="flex flex-col">
+            <span className="text-sm font-medium text-gray-700">Stream Quality Check</span>
+            <span className="text-xs text-gray-500">
+              Verify audio clarity and video quality before going live
+            </span>
+          </div>
+          <div className="flex items-center gap-2">
+            <button 
+              onClick={() => {
+                setRetryCount(count => count + 1);
+                initPlayer();
+              }}
+              className="px-3 py-1.5 bg-blue-600 text-white rounded flex items-center gap-1.5 hover:bg-blue-700 transition-colors text-sm"
+            >
+              <RefreshCw className="h-3.5 w-3.5" /> Refresh Stream
+            </button>
+            <button
+              onClick={onClose}
+              className="px-3 py-1.5 bg-gray-200 text-gray-700 rounded hover:bg-gray-300 transition-colors text-sm"
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// Stream Status Indicator component
+const StreamStatusIndicator = ({ status }) => {
+  let bgColor, textColor, label;
+  
+  switch (status) {
+    case 'live':
+      bgColor = 'bg-red-100';
+      textColor = 'text-red-700';
+      label = 'Live';
+      break;
+    case 'starting':
+      bgColor = 'bg-yellow-100';
+      textColor = 'text-yellow-700';
+      label = 'Starting soon';
+      break;
+    case 'ended':
+      bgColor = 'bg-gray-100';
+      textColor = 'text-gray-700';
+      label = 'Ended';
+      break;
+    default:
+      bgColor = 'bg-blue-100';
+      textColor = 'text-blue-700';
+      label = 'Offline';
+  }
+  
+  return (
+    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${bgColor} ${textColor}`}>
+      {status === 'live' && (
+        <span className="relative flex h-2 w-2 mr-1">
+          <span className={`animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75`}></span>
+          <span className={`relative inline-flex rounded-full h-2 w-2 bg-red-500`}></span>
+        </span>
+      )}
+      {label}
+    </span>
+  );
+};
+
+const handleStreamControl = async (moduleIndex, lessonIndex, currentStatus) => {
+  try {
+    let newStatus;
+    if (currentStatus === 'starting' || currentStatus === 'live') {
+      newStatus = 'ended';
+      
+      // Show confirmation if ending live stream
+      if (currentStatus === 'live' && 
+          !window.confirm('Are you sure you want to end this live stream? Students will no longer be able to view it.')) {
+        return;
+      }
+    } else {
+      newStatus = 'starting';
+    }
+    
+    const { data } = await axiosInstance.post(
+      `/streams/${currentCourseId}/modules/${moduleIndex}/lessons/${lessonIndex}/control`,
+      { status: newStatus }
+    );
+    
+    // Update the lesson with new status from server response safely
+    setModulesList(prevModules => {
+      const updatedModules = [...prevModules];
+      if (updatedModules[moduleIndex] && updatedModules[moduleIndex].lessons[lessonIndex]) {
+        updatedModules[moduleIndex].lessons[lessonIndex].streamStatus = data.streamStatus || newStatus;
+      }
+      return updatedModules;
+    });
+    
+    toast.success(`Stream ${newStatus === 'starting' ? 'started' : 'ended'} successfully`);
+    
+    // If starting a stream, show instructions
+    if (newStatus === 'starting') {
+      toast.info('Now open OBS and start streaming using the provided stream key', {
+        autoClose: 10000 // Show for 10 seconds
+      });
+    }
+  } catch (error) {
+    console.error('Error controlling stream:', error);
+    toast.error('Failed to control stream: ' + (error.response?.data?.message || 'Unknown error'));
+  }
+};
+
+const verifyStreamIsActive = async (streamKey) => {
+  if (!streamKey) return false;
+  
+  try {
+    // Use a cache-busting parameter to avoid cached responses
+    const timestamp = Date.now();
+    const response = await fetch(`http://${window.location.hostname}:8080/hls/${streamKey}.m3u8?t=${timestamp}`, {
+      method: 'HEAD',
+      cache: 'no-cache'
+    });
+    
+    return response.ok;
+  } catch (error) {
+    console.error("Error verifying stream status:", error);
+    return false;
+  }
+};
+
+useEffect(() => {
+  // Skip the effect if no current course
+  if (!currentCourseId || modulesList.length === 0) return;
+  
+  // Function to check stream status
+  const checkStreamStatuses = async () => {
+    try {
+      // Fetch updated course data to sync stream statuses
+      const { data } = await axiosInstance.get(`/courses/${currentCourseId}`);
+      
+      // Only update if there are actual status changes
+      let hasChanges = false;
+      
+      const updatedModules = [...modulesList];
+      if (data.modules && data.modules.length > 0) {
+        data.modules.forEach((serverModule, moduleIdx) => {
+          if (serverModule.lessons && updatedModules[moduleIdx]) {
+            serverModule.lessons.forEach((serverLesson, lessonIdx) => {
+              if (serverLesson.isLiveStream && 
+                  updatedModules[moduleIdx]?.lessons[lessonIdx] &&
+                  updatedModules[moduleIdx].lessons[lessonIdx].streamStatus !== serverLesson.streamStatus) {
+                
+                updatedModules[moduleIdx].lessons[lessonIdx].streamStatus = serverLesson.streamStatus;
+                hasChanges = true;
+              }
+            });
+          }
+        });
+        
+        if (hasChanges) {
+          setModulesList(updatedModules);
+        }
+      }
+    } catch (error) {
+      console.error('Error checking stream statuses:', error);
+    }
+  };
+  
+  // Check once when the component loads
+  checkStreamStatuses();
+  
+  // Set up interval for checking
+  const intervalId = setInterval(checkStreamStatuses, 15000);
+  
+  return () => {
+    clearInterval(intervalId);
+  };
+}, [currentCourseId]); // Only re-run when course ID changes
 
   // Main component rendering
   return (
@@ -961,50 +1378,33 @@ const handleVideoUpload = async (moduleIndex, lessonIndex, file) => {
                                                       ? 'bg-red-100 text-red-700 hover:bg-red-200'
                                                       : 'bg-green-100 text-green-700 hover:bg-green-200'
                                                   }`}
-                                                  onClick={async () => {
-                                                    try {
-                                                      let newStatus;
-                                                      if (lesson.streamStatus === 'starting' || lesson.streamStatus === 'live') {
-                                                        newStatus = 'ended';
-                                                      } else {
-                                                        newStatus = 'starting';
-                                                      }
-                                                      
-                                                      const { data } = await axiosInstance.post(
-                                                        `/streams/${currentCourseId}/modules/${moduleIndex}/lessons/${lessonIndex}/control`,
-                                                        { status: newStatus }
-                                                      );
-                                                      
-                                                      // Update the lesson with new status
-                                                      const updatedModules = [...modulesList];
-                                                      updatedModules[moduleIndex].lessons[lessonIndex].streamStatus = newStatus;
-                                                      setModulesList(updatedModules);
-                                                      
-                                                      toast.success(`Stream ${newStatus === 'starting' ? 'started' : 'ended'} successfully`);
-                                                    } catch (error) {
-                                                      console.error('Error controlling stream:', error);
-                                                      toast.error('Failed to control stream: ' + (error.response?.data?.message || 'Unknown error'));
-                                                    }
-                                                  }}
+                                                  onClick={async () => handleStreamControl(moduleIndex, lessonIndex, lesson.streamStatus)}
                                                 >
                                                   {lesson.streamStatus === 'starting' || lesson.streamStatus === 'live'
                                                     ? 'End Stream'
                                                     : 'Start Stream'}
                                                 </button>
                                                 
+                                                <button
+                                                  type="button"
+                                                  className="px-3 py-1 text-xs font-medium rounded-md bg-blue-100 text-blue-700 hover:bg-blue-200 flex items-center gap-1 ml-2"
+                                                  onClick={(e) => {
+                                                    e.preventDefault();
+                                                    e.stopPropagation();
+                                                    if (lesson.streamKey) {
+                                                      setPreviewStreamKey(lesson.streamKey);
+                                                      setShowPreview(true);
+                                                    } else {
+                                                      toast.error("No stream key available");
+                                                    }
+                                                  }}
+                                                  disabled={!lesson.streamKey}
+                                                >
+                                                  <Eye className="h-3 w-3" /> Preview Stream
+                                                </button>
+                                                
                                                 <div className="px-3 py-1 text-xs rounded-md bg-gray-100 flex items-center">
-                                                  Status: 
-                                                  <span className={`ml-1 font-medium ${
-                                                    lesson.streamStatus === 'live' ? 'text-red-600' :
-                                                    lesson.streamStatus === 'starting' ? 'text-yellow-600' :
-                                                    lesson.streamStatus === 'ended' ? 'text-gray-600' :
-                                                    'text-blue-600'
-                                                  }`}>
-                                                    {lesson.streamStatus === 'live' ? 'Live' :
-                                                     lesson.streamStatus === 'starting' ? 'Starting soon' :
-                                                     lesson.streamStatus === 'ended' ? 'Ended' :
-                                                     'Offline'}
-                                                  </span>
+                                                  Status: <StreamStatusIndicator status={lesson.streamStatus} />
                                                 </div>
                                               </div>
                                             </>
@@ -1100,6 +1500,14 @@ const handleVideoUpload = async (moduleIndex, lessonIndex, file) => {
             </div>
           </div>
         </div>
+      )}
+      
+      {/* Render the stream preview modal when active */}
+      {showPreview && previewStreamKey && (
+        <StreamPreview 
+          streamKey={previewStreamKey} 
+          onClose={() => setShowPreview(false)} 
+        />
       )}
     </div>
   );

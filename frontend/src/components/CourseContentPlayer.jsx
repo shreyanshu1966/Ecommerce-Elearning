@@ -363,18 +363,20 @@ const CourseContentPlayer = ({ courseId, userEnrolled }) => {
                     {streamInfo?.streamStatus !== 'live' ? (
                       <div className="absolute inset-0 flex flex-col items-center justify-center bg-gray-800 text-white">
                         <Radio className={`h-12 w-12 mb-3 ${
-                          streamInfo?.streamStatus === 'starting' ? 'text-yellow-400 animate-pulse' : 'text-white'
+                          streamInfo?.streamStatus === 'starting' || streamInfo?.streamStatus === 'preview' 
+                            ? 'text-yellow-400 animate-pulse' 
+                            : 'text-white'
                         }`} />
                         <h3 className="text-lg font-medium text-center px-4">
-                          {streamInfo?.streamStatus === 'starting' 
+                          {streamInfo?.streamStatus === 'starting' || streamInfo?.streamStatus === 'preview'
                             ? 'Stream is starting soon...' 
                             : streamInfo?.streamStatus === 'ended'
-                            ? 'This live stream has ended'
-                            : streamInfo?.scheduledStartTime 
-                              ? `Stream scheduled for ${new Date(streamInfo.scheduledStartTime).toLocaleString()}` 
-                              : 'Stream is currently offline'}
+                              ? 'This live stream has ended'
+                              : streamInfo?.scheduledStartTime 
+                                ? `Stream scheduled for ${new Date(streamInfo.scheduledStartTime).toLocaleString()}` 
+                                : 'Stream is currently offline'}
                         </h3>
-                        {streamInfo?.streamStatus === 'starting' && (
+                        {(streamInfo?.streamStatus === 'starting' || streamInfo?.streamStatus === 'preview') && (
                           <p className="mt-2 text-yellow-300">Please wait, the instructor is setting up</p>
                         )}
                         {streamInfo?.streamStatus === 'ended' && (

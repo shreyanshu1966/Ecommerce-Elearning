@@ -5,7 +5,8 @@ const {
   updateStreamStatus, 
   getStreamInfo,
   scheduleStream,
-  controlStreamStatus
+  controlStreamStatus,
+  getStreamPreview
 } = require('../controllers/streamController');
 const { protect, admin } = require('../middleware/authMiddleware');
 
@@ -23,5 +24,8 @@ router.post('/:courseId/modules/:moduleIndex/lessons/:lessonIndex/schedule', pro
 
 // Manually control stream status
 router.post('/:courseId/modules/:moduleIndex/lessons/:lessonIndex/control', protect, admin, controlStreamStatus);
+
+// Add new route for admin preview
+router.get('/:courseId/modules/:moduleIndex/lessons/:lessonIndex/preview', protect, admin, getStreamPreview);
 
 module.exports = router;
