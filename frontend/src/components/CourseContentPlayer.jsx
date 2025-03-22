@@ -20,8 +20,8 @@ const CourseContentPlayer = ({ courseId, userEnrolled }) => {
 
   // Always use this for HLS URLs - replace the function with this exact implementation
   const getStreamUrl = (streamKey) => {
-    // IMPORTANT: Remove query string to avoid caching issues
-    return `https://api.intuitiverobotics.in/hls/${streamKey}.m3u8`;
+    // Add timestamp to avoid caching
+    return `https://api.intuitiverobotics.in/hls/${streamKey}.m3u8?t=${Date.now()}`;
   };
 
   // Fetch course details with modules and lessons
