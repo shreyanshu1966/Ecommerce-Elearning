@@ -17,9 +17,8 @@ const CourseContentPlayer = ({ courseId, userEnrolled }) => {
 
   // Use a consistent domain for HLS paths
   const getStreamUrl = (streamKey) => {
-    // This ensures we use the same domain we're currently on
-    const host = window.location.hostname;
-    return `https://${host}/hls/${streamKey}.m3u8?t=${Date.now()}`;
+    // Always use the API domain for HLS streams
+    return `https://api.intuitiverobotics.in/hls/${streamKey}.m3u8?t=${Date.now()}`;
   };
 
   // Fetch course details with modules and lessons

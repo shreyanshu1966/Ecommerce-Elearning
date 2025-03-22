@@ -230,8 +230,8 @@ const getStreamPreview = async (req, res) => {
       streamKey: lesson.streamKey,
       streamStatus: lesson.streamStatus,
       scheduledStartTime: lesson.scheduledStartTime,
-      // Update URL to ensure consistency with frontend
-      previewUrl: `https://www.intuitiverobotics.in/hls/${lesson.streamKey}.m3u8?t=${Date.now()}`
+      // Make sure to use the API domain
+      previewUrl: `https://api.intuitiverobotics.in/hls/${lesson.streamKey}.m3u8?t=${Date.now()}`
     });
   } catch (error) {
     res.status(500).json({ message: error.message });

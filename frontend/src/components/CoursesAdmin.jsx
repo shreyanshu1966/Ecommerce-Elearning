@@ -1364,7 +1364,7 @@ useEffect(() => {
                                                 </button>
                                               </div>
                                               <div className="mt-2 text-xs text-gray-500">
-                                                RTMP URL: rtmp://{window.location.hostname}:1935/live
+                                                RTMP URL: rtmp://intuitiverobotics.in:1935/live
                                               </div>
                                               <div className="mt-1 text-xs text-gray-500">
                                                 Stream Key: {lesson.streamKey} (Keep this private)
