@@ -20,7 +20,19 @@ connectDB();
 
 const app = express();
 app.use(express.json());
-app.use(cors());
+
+app.use(cors({
+  origin: [
+    'https://www.intuitiverobotics.in',
+    'https://intuitiverobotics.in',
+    'http://localhost:5173',
+    'http://localhost:3000'
+  ],
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: true,
+  maxAge: 86400 // 24 hours
+}));
 
 app.use('/api/users', userRoutes);
 
