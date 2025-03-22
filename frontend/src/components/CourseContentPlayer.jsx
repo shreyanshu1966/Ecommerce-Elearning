@@ -4,6 +4,9 @@ import axiosInstance from '../utils/axiosConfig';
 import videojs from 'video.js';
 import 'video.js/dist/video-js.css';
 
+// First, enable debug logging at the top of your file - ADD THIS RIGHT AFTER IMPORTS
+videojs.log.level('debug');
+
 const CourseContentPlayer = ({ courseId, userEnrolled }) => {
   const [course, setCourse] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -139,10 +142,11 @@ const CourseContentPlayer = ({ courseId, userEnrolled }) => {
     let statusInterval;
     let keepAliveInterval;
     
+    // Fix the player initialization - REPLACE LINES ~139-174
     // Only initialize VideoJS if we're showing a livestream
     if (videoRef.current) {
       const videoElement = document.createElement('video');
-      videoElement.className = 'video-js vjs-big-play-centered';
+      videoElement.className = 'video-js vjs-big-play-centered vjs-theme-default';
       videoRef.current.innerHTML = '';
       videoRef.current.appendChild(videoElement);
       
@@ -152,25 +156,68 @@ const CourseContentPlayer = ({ courseId, userEnrolled }) => {
         fluid: true,
         responsive: true,
         liveui: true,
-        liveTracker: {
-          trackingThreshold: 0,
-          liveTolerance: 15
+        playbackRates: [0.5, 1, 1.5, 2],
+        controlBar: {
+          pictureInPictureToggle: false,
+          fullscreenToggle: true,
         },
+        // Updated settings for better HLS handling
         html5: {
-          hls: {
+          vhs: {  // Note: use vhs, not hls
             overrideNative: true,
             withCredentials: false,
             enableLowInitialPlaylist: true,
-            smoothQualityChange: true,
-            bandwidth: 5000000
-          }
+            limitRenditionByPlayerDimensions: false,
+            useBandwidthFromLocalStorage: true
+          },
+          nativeAudioTracks: false,
+          nativeVideoTracks: false
         },
         sources: [{
           src: getStreamUrl(streamInfo.streamKey),
-          type: 'application/x-mpegURL'
+          type: 'application/x-mpegURL' // Correct MIME type
         }]
       });
       
+      // Add error handling and recovery
+      player.on('error', function() {
+        console.error('Video.js player error:', player.error());
+        
+        // Try to recover after a short delay
+        setTimeout(() => {
+          if (player) {
+            player.src({
+              src: getStreamUrl(streamInfo.streamKey),
+              type: 'application/x-mpegURL'
+            });
+            player.load();
+            player.play().catch(err => console.error('Error on auto-recovery play:', err));
+          }
+        }, 3000);
+      });
+      
+      // Add after the player initialization, before player.ready() - around line 175
+      player.on('loadstart', function() {
+        console.log('Player: loadstart event');
+      });
+
+      player.on('loadeddata', function() {
+        console.log('Player: loadeddata event - stream loaded successfully');
+      });
+
+      player.on('waiting', function() {
+        console.log('Player: waiting for data');
+      });
+
+      player.on('canplay', function() {
+        console.log('Player: canplay event - stream can start playing');
+      });
+
+      // Add this to monitor if the stream actually starts playing
+      player.on('playing', function() {
+        console.log('Player: playback has started');
+      });
+
       // Add error recovery and other player event handlers...
       
       player.ready(() => {
@@ -219,7 +266,8 @@ const CourseContentPlayer = ({ courseId, userEnrolled }) => {
               if (data.streamStatus === 'live' && player && player.paused()) {
                 console.log('Stream is now live, restarting playback');
                 player.src({
-                  src: `https://${window.location.hostname}/hls/${data.streamKey}.m3u8?t=${Date.now()}`,
+                  // REPLACE THIS LINE - Use the getStreamUrl function instead of window.location.hostname
+                  src: getStreamUrl(data.streamKey),
                   type: 'application/x-mpegURL'
                 });
                 player.play();
@@ -394,11 +442,15 @@ const CourseContentPlayer = ({ courseId, userEnrolled }) => {
                       <button 
                         onClick={() => {
                           if (playerRef.current) {
-                            playerRef.current.src({
+                            // Properly update the player source with an updated timestamp
+                            const newSource = {
                               src: getStreamUrl(streamInfo.streamKey),
                               type: 'application/x-mpegURL'
-                            });
-                            playerRef.current.play();
+                            };
+                            console.log('Manually reloading player with new source:', newSource);
+                            playerRef.current.src(newSource);
+                            playerRef.current.load();
+                            playerRef.current.play().catch(err => console.error('Error on reload button play:', err));
                           }
                         }}
                         className="absolute top-4 right-4 bg-black bg-opacity-50 p-2 rounded-full hover:bg-opacity-70 z-10"
