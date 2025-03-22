@@ -11,3 +11,5 @@ services:
       - ./hls:/hls  # Fixed path to store HLS files
     restart: unless-stopped
     container_name: nginx-rtmp-server
+    # Add host network mode for better connectivity
+    network_mode: "host"
