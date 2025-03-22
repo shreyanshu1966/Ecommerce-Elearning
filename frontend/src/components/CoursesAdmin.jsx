@@ -368,7 +368,7 @@ const StreamPreview = ({ streamKey, onClose }) => {
           fullscreenToggle: true,
         },
         sources: [{
-          // Replace with proper HTTPS URL and remove explicit port
+          // Remove port specification and use https
           src: `https://${window.location.hostname}/hls/${streamKey}.m3u8?t=${Date.now()}`,
           type: 'application/x-mpegURL'
         }],
@@ -665,7 +665,7 @@ const verifyStreamIsActive = async (streamKey) => {
   try {
     // Use a cache-busting parameter to avoid cached responses
     const timestamp = Date.now();
-    const response = await fetch(`http://${window.location.hostname}:8080/hls/${streamKey}.m3u8?t=${timestamp}`, {
+    const response = await fetch(`https://${window.location.hostname}/hls/${streamKey}.m3u8?t=${timestamp}`, {
       method: 'HEAD',
       cache: 'no-cache'
     });

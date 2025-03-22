@@ -80,8 +80,8 @@ const CourseContentPlayer = ({ courseId, userEnrolled }) => {
         `/streams/${courseId}/modules/${moduleIndex}/lessons/${lessonIndex}/info`
       );
       
-      // Add timestamp to URL to avoid caching issues
-      data.fullPlaybackUrl = `https://${window.location.hostname}:8080/hls/${data.streamKey}.m3u8?t=${Date.now()}`;
+      // Remove port specification and use https
+      data.fullPlaybackUrl = `https://${window.location.hostname}/hls/${data.streamKey}.m3u8?t=${Date.now()}`;
       
       // Only update the player if stream status has changed
       const statusChanged = !streamInfo || streamInfo.streamStatus !== data.streamStatus;
@@ -92,7 +92,7 @@ const CourseContentPlayer = ({ courseId, userEnrolled }) => {
       if (statusChanged && data.streamStatus === 'live' && playerRef.current) {
         console.log('Stream status changed to live, refreshing player');
         playerRef.current.src({
-          src: `https://${window.location.hostname}:8080/hls/${streamInfo.streamKey}.m3u8?t=${Date.now()}`,
+          src: `https://${window.location.hostname}/hls/${streamInfo.streamKey}.m3u8?t=${Date.now()}`,
           type: 'application/x-mpegURL'
         });
         playerRef.current.play();
@@ -160,7 +160,7 @@ const CourseContentPlayer = ({ courseId, userEnrolled }) => {
           }
         },
         sources: [{
-          // Replace http with https and ensure correct hostname
+          // Remove port specification and use https
           src: `https://${window.location.hostname}/hls/${streamInfo.streamKey}.m3u8`,
           type: 'application/x-mpegURL'
         }]
@@ -214,7 +214,7 @@ const CourseContentPlayer = ({ courseId, userEnrolled }) => {
               if (data.streamStatus === 'live' && player && player.paused()) {
                 console.log('Stream is now live, restarting playback');
                 player.src({
-                  src: `https://${window.location.hostname}:8080/hls/${data.streamKey}.m3u8?t=${Date.now()}`,
+                  src: `https://${window.location.hostname}/hls/${data.streamKey}.m3u8?t=${Date.now()}`,
                   type: 'application/x-mpegURL'
                 });
                 player.play();
@@ -390,7 +390,7 @@ const CourseContentPlayer = ({ courseId, userEnrolled }) => {
                         onClick={() => {
                           if (playerRef.current) {
                             playerRef.current.src({
-                              src: `https://${window.location.hostname}:8080/hls/${streamInfo.streamKey}.m3u8?t=${Date.now()}`,
+                              src: `https://${window.location.hostname}/hls/${streamInfo.streamKey}.m3u8?t=${Date.now()}`,
                               type: 'application/x-mpegURL'
                             });
                             playerRef.current.play();
