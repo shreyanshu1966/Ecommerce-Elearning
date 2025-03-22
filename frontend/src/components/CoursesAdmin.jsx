@@ -368,7 +368,7 @@ const StreamPreview = ({ streamKey, onClose }) => {
           fullscreenToggle: true,
         },
         sources: [{
-          src: `http://${window.location.hostname}:8080/hls/${streamKey}.m3u8?t=${Date.now()}`,
+          src: `https://${window.location.hostname}:8080/hls/${streamKey}.m3u8?t=${Date.now()}`,
           type: 'application/x-mpegURL'
         }],
         html5: {

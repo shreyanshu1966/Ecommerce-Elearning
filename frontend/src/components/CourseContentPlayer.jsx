@@ -81,7 +81,7 @@ const CourseContentPlayer = ({ courseId, userEnrolled }) => {
       );
       
       // Add timestamp to URL to avoid caching issues
-      data.fullPlaybackUrl = `http://${window.location.hostname}:8080/hls/${data.streamKey}.m3u8?t=${Date.now()}`;
+      data.fullPlaybackUrl = `https://${window.location.hostname}:8080/hls/${data.streamKey}.m3u8?t=${Date.now()}`;
       
       // Only update the player if stream status has changed
       const statusChanged = !streamInfo || streamInfo.streamStatus !== data.streamStatus;
@@ -92,7 +92,7 @@ const CourseContentPlayer = ({ courseId, userEnrolled }) => {
       if (statusChanged && data.streamStatus === 'live' && playerRef.current) {
         console.log('Stream status changed to live, refreshing player');
         playerRef.current.src({
-          src: data.fullPlaybackUrl,
+          src: `https://${window.location.hostname}:8080/hls/${streamInfo.streamKey}.m3u8?t=${Date.now()}`,
           type: 'application/x-mpegURL'
         });
         playerRef.current.play();
@@ -213,7 +213,7 @@ const CourseContentPlayer = ({ courseId, userEnrolled }) => {
               if (data.streamStatus === 'live' && player && player.paused()) {
                 console.log('Stream is now live, restarting playback');
                 player.src({
-                  src: `http://${window.location.hostname}:8080/hls/${data.streamKey}.m3u8?t=${Date.now()}`,
+                  src: `https://${window.location.hostname}:8080/hls/${data.streamKey}.m3u8?t=${Date.now()}`,
                   type: 'application/x-mpegURL'
                 });
                 player.play();
@@ -389,7 +389,7 @@ const CourseContentPlayer = ({ courseId, userEnrolled }) => {
                         onClick={() => {
                           if (playerRef.current) {
                             playerRef.current.src({
-                              src: `http://${window.location.hostname}:8080/hls/${streamInfo.streamKey}.m3u8?t=${Date.now()}`,
+                              src: `https://${window.location.hostname}:8080/hls/${streamInfo.streamKey}.m3u8?t=${Date.now()}`,
                               type: 'application/x-mpegURL'
                             });
                             playerRef.current.play();
