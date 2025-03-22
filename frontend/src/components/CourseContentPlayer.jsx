@@ -18,10 +18,10 @@ const CourseContentPlayer = ({ courseId, userEnrolled }) => {
   const videoRef = useRef(null);
   const playerRef = useRef(null);
 
-  // Use a consistent domain for HLS paths
+  // Always use this for HLS URLs - replace the function with this exact implementation
   const getStreamUrl = (streamKey) => {
-    // Always use api.intuitiverobotics.in for HLS streams
-    return `https://api.intuitiverobotics.in/hls/${streamKey}.m3u8?t=${Date.now()}`;
+    // IMPORTANT: Remove query string to avoid caching issues
+    return `https://api.intuitiverobotics.in/hls/${streamKey}.m3u8`;
   };
 
   // Fetch course details with modules and lessons
@@ -150,6 +150,7 @@ const CourseContentPlayer = ({ courseId, userEnrolled }) => {
       videoRef.current.innerHTML = '';
       videoRef.current.appendChild(videoElement);
       
+      // CRITICAL: Store the player reference IMMEDIATELY after creation
       const player = videojs(videoElement, {
         autoplay: true,
         controls: true,
@@ -179,7 +180,10 @@ const CourseContentPlayer = ({ courseId, userEnrolled }) => {
         }]
       });
       
-      // Add error handling and recovery
+      // Store player reference FIRST
+      playerRef.current = player;
+      
+      // Now add all the event handlers
       player.on('error', function() {
         console.error('Video.js player error:', player.error());
         
@@ -220,8 +224,12 @@ const CourseContentPlayer = ({ courseId, userEnrolled }) => {
 
       // Add error recovery and other player event handlers...
       
+      // Add the ready handler AFTER setting playerRef
       player.ready(() => {
-        // Create reconnect mechanism and other player setup...
+        console.log('Player is ready, attempting to play');
+        player.play().catch(err => {
+          console.error('Error auto-playing on ready:', err);
+        });
         
         // Keep-alive ping to avoid player from timing out
         keepAliveInterval = setInterval(() => {
@@ -263,16 +271,38 @@ const CourseContentPlayer = ({ courseId, userEnrolled }) => {
             if (lastStreamStatus !== data.streamStatus) {
               console.log(`Stream status changed from ${lastStreamStatus} to ${data.streamStatus}`);
               
-              if (data.streamStatus === 'live' && player && player.paused()) {
-                console.log('Stream is now live, restarting playback');
-                player.src({
-                  // REPLACE THIS LINE - Use the getStreamUrl function instead of window.location.hostname
-                  src: getStreamUrl(data.streamKey),
-                  type: 'application/x-mpegURL'
-                });
-                player.play();
-              } else if (data.streamStatus !== 'live' && player) {
-                console.log('Stream is no longer live');
+              // This is critical - only now initialize the player if it wasn't before
+              if (data.streamStatus === 'live') {
+                console.log('Stream is now live');
+                
+                if (!playerRef.current) {
+                  console.log('Creating new player for live stream');
+                  // Initialize the player here (duplicating player creation code)
+                  // This ensures the player is created when the stream becomes live
+                  const videoElement = document.createElement('video');
+                  videoElement.className = 'video-js vjs-big-play-centered';
+                  videoRef.current.innerHTML = '';
+                  videoRef.current.appendChild(videoElement);
+                  
+                  playerRef.current = videojs(videoElement, {
+                    autoplay: true,
+                    controls: true,
+                    fluid: true,
+                    sources: [{
+                      src: getStreamUrl(data.streamKey),
+                      type: 'application/x-mpegURL'
+                    }]
+                  });
+                  
+                  playerRef.current.play();
+                } else if (playerRef.current.paused()) {
+                  // Just update source and play
+                  playerRef.current.src({
+                    src: getStreamUrl(data.streamKey),
+                    type: 'application/x-mpegURL'
+                  });
+                  playerRef.current.play();
+                }
               }
             }
             
@@ -436,6 +466,25 @@ const CourseContentPlayer = ({ courseId, userEnrolled }) => {
                         {streamInfo?.streamStatus === 'ended' && (
                           <p className="mt-2 text-gray-300">Thanks for watching!</p>
                         )}
+                        
+                        {/* Add a direct test button during development */}
+                        <button 
+                          onClick={() => {
+                            // Create a direct video element for testing
+                            const directUrl = getStreamUrl(streamInfo.streamKey);
+                            videoRef.current.innerHTML = '';
+                            const testVideo = document.createElement('video');
+                            testVideo.setAttribute('controls', 'true');
+                            testVideo.style.width = '100%';
+                            testVideo.style.height = '100%';
+                            testVideo.src = directUrl;
+                            videoRef.current.appendChild(testVideo);
+                            testVideo.play().catch(e => console.error('Direct play failed:', e));
+                          }}
+                          className="mt-4 px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700"
+                        >
+                          Try Direct Play
+                        </button>
                       </div>
                     ) : (
                       // Add reload button overlay
