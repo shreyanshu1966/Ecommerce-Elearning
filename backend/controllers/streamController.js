@@ -25,11 +25,11 @@ const generateStreamKey = async (req, res) => {
     
     await course.save();
     
-    res.json({ 
+    res.status(201).json({
       message: 'Stream key generated successfully',
       streamKey,
-      // Let the frontend construct the full URLs with correct ports
-      rtmpUrl: `rtmp://${req.get('host').split(':')[0]}:1935/live`
+      // Fix the RTMP URL to point to your actual domain
+      rtmpUrl: `rtmp://intuitiverobotics.in:1935/live`
     });
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -225,13 +225,13 @@ const getStreamPreview = async (req, res) => {
       return res.status(400).json({ message: 'This lesson is not configured for live streaming' });
     }
     
-    res.json({
+    res.status(200).json({
       isLiveStream: lesson.isLiveStream,
       streamKey: lesson.streamKey,
       streamStatus: lesson.streamStatus,
       scheduledStartTime: lesson.scheduledStartTime,
-      // Remove port specification and use https
-      previewUrl: `https://${req.get('host').split(':')[0]}/hls/${lesson.streamKey}.m3u8?t=${Date.now()}`
+      // Update URL to ensure consistency with frontend
+      previewUrl: `https://www.intuitiverobotics.in/hls/${lesson.streamKey}.m3u8?t=${Date.now()}`
     });
   } catch (error) {
     res.status(500).json({ message: error.message });

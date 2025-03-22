@@ -3,13 +3,15 @@ version: '3'
 services:
   nginx-rtmp:
     image: tiangolo/nginx-rtmp
+    # Choose ONE approach - either network_mode: "host" OR port mappings:
+    # Option 1: Use port mappings (recommended)
     ports:
       - "1935:1935"  # RTMP
       - "8080:8080"  # HTTP for HLS playback
+    # Option 2: Use host network (remove this line if using port mappings)
+    # network_mode: "host"
     volumes:
       - ./nginx.conf:/etc/nginx/nginx.conf
       - ./hls:/hls  # Fixed path to store HLS files
     restart: unless-stopped
     container_name: nginx-rtmp-server
-    # Add host network mode for better connectivity
-    network_mode: "host"

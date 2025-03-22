@@ -21,10 +21,15 @@ connectDB();
 const app = express();
 app.use(express.json());
 
+// Fix CORS configuration to allow both www and non-www domains
 app.use(cors({
-    origin: 'https://www.intuitiverobotics.in', // Ensure only one origin is set
-    credentials: true,
-  }));
+  origin: [
+    'https://www.intuitiverobotics.in',
+    'https://intuitiverobotics.in',
+    'https://api.intuitiverobotics.in'
+  ], 
+  credentials: true,
+}));
 
 app.use('/api/users', userRoutes);
 
