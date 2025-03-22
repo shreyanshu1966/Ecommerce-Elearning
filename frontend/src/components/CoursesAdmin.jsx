@@ -368,8 +368,8 @@ const StreamPreview = ({ streamKey, onClose }) => {
           fullscreenToggle: true,
         },
         sources: [{
-          // Remove port specification and use https
-          src: `https://${window.location.hostname}/hls/${streamKey}.m3u8?t=${Date.now()}`,
+          // Use api subdomain consistently
+          src: `https://api.intuitiverobotics.in/hls/${streamKey}.m3u8?t=${Date.now()}`,
           type: 'application/x-mpegURL'
         }],
         html5: {
@@ -659,13 +659,14 @@ const handleStreamControl = async (moduleIndex, lessonIndex, currentStatus) => {
   }
 };
 
+// Update around line 666-667
 const verifyStreamIsActive = async (streamKey) => {
   if (!streamKey) return false;
   
   try {
-    // Use a cache-busting parameter to avoid cached responses
+    // Use API domain consistently here too
     const timestamp = Date.now();
-    const response = await fetch(`https://${window.location.hostname}/hls/${streamKey}.m3u8?t=${timestamp}`, {
+    const response = await fetch(`https://api.intuitiverobotics.in/hls/${streamKey}.m3u8?t=${timestamp}`, {
       method: 'HEAD',
       cache: 'no-cache'
     });

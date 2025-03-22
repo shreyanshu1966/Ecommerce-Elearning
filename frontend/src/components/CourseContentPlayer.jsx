@@ -17,7 +17,7 @@ const CourseContentPlayer = ({ courseId, userEnrolled }) => {
 
   // Use a consistent domain for HLS paths
   const getStreamUrl = (streamKey) => {
-    // Always use the API domain for HLS streams
+    // Always use api.intuitiverobotics.in for HLS streams
     return `https://api.intuitiverobotics.in/hls/${streamKey}.m3u8?t=${Date.now()}`;
   };
 
@@ -166,7 +166,6 @@ const CourseContentPlayer = ({ courseId, userEnrolled }) => {
           }
         },
         sources: [{
-          // Remove port specification and use https
           src: getStreamUrl(streamInfo.streamKey),
           type: 'application/x-mpegURL'
         }]
