@@ -230,7 +230,8 @@ const getStreamPreview = async (req, res) => {
       streamKey: lesson.streamKey,
       streamStatus: lesson.streamStatus,
       scheduledStartTime: lesson.scheduledStartTime,
-      previewUrl: `https://${req.get('host').split(':')[0]}:8080/hls/${lesson.streamKey}.m3u8?t=${Date.now()}`
+      // Remove port specification and use https
+      previewUrl: `https://${req.get('host').split(':')[0]}/hls/${lesson.streamKey}.m3u8?t=${Date.now()}`
     });
   } catch (error) {
     res.status(500).json({ message: error.message });

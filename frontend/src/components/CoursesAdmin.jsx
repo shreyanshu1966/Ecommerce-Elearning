@@ -368,7 +368,8 @@ const StreamPreview = ({ streamKey, onClose }) => {
           fullscreenToggle: true,
         },
         sources: [{
-          src: `https://${window.location.hostname}:8080/hls/${streamKey}.m3u8?t=${Date.now()}`,
+          // Replace with proper HTTPS URL and remove explicit port
+          src: `https://${window.location.hostname}/hls/${streamKey}.m3u8?t=${Date.now()}`,
           type: 'application/x-mpegURL'
         }],
         html5: {

@@ -160,7 +160,8 @@ const CourseContentPlayer = ({ courseId, userEnrolled }) => {
           }
         },
         sources: [{
-          src: `http://${window.location.hostname}:8080/hls/${streamInfo.streamKey}.m3u8`,
+          // Replace http with https and ensure correct hostname
+          src: `https://${window.location.hostname}/hls/${streamInfo.streamKey}.m3u8`,
           type: 'application/x-mpegURL'
         }]
       });
