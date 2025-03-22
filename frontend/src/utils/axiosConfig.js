@@ -2,7 +2,7 @@ import axios from 'axios';
 import store from '../store/store';
 
 const axiosInstance = axios.create({
-  baseURL: 'http://localhost:5000/api/', // Added /api prefix to fix 404 errors
+  baseURL: `${import.meta.env.VITE_API_BASE_URL}/api/`,
   headers: {
     'Content-Type': 'application/json',
   },
