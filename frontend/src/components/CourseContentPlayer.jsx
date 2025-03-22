@@ -15,6 +15,13 @@ const CourseContentPlayer = ({ courseId, userEnrolled }) => {
   const videoRef = useRef(null);
   const playerRef = useRef(null);
 
+  // Use a consistent domain for HLS paths
+  const getStreamUrl = (streamKey) => {
+    // This ensures we use the same domain we're currently on
+    const host = window.location.hostname;
+    return `https://${host}/hls/${streamKey}.m3u8?t=${Date.now()}`;
+  };
+
   // Fetch course details with modules and lessons
   useEffect(() => {
     const fetchCourse = async () => {
@@ -81,7 +88,7 @@ const CourseContentPlayer = ({ courseId, userEnrolled }) => {
       );
       
       // Remove port specification and use https
-      data.fullPlaybackUrl = `https://${window.location.hostname}/hls/${data.streamKey}.m3u8?t=${Date.now()}`;
+      data.fullPlaybackUrl = getStreamUrl(data.streamKey);
       
       // Only update the player if stream status has changed
       const statusChanged = !streamInfo || streamInfo.streamStatus !== data.streamStatus;
@@ -92,7 +99,7 @@ const CourseContentPlayer = ({ courseId, userEnrolled }) => {
       if (statusChanged && data.streamStatus === 'live' && playerRef.current) {
         console.log('Stream status changed to live, refreshing player');
         playerRef.current.src({
-          src: `https://${window.location.hostname}/hls/${streamInfo.streamKey}.m3u8?t=${Date.now()}`,
+          src: getStreamUrl(streamInfo.streamKey),
           type: 'application/x-mpegURL'
         });
         playerRef.current.play();
@@ -161,7 +168,7 @@ const CourseContentPlayer = ({ courseId, userEnrolled }) => {
         },
         sources: [{
           // Remove port specification and use https
-          src: `https://${window.location.hostname}/hls/${streamInfo.streamKey}.m3u8`,
+          src: getStreamUrl(streamInfo.streamKey),
           type: 'application/x-mpegURL'
         }]
       });
@@ -390,7 +397,7 @@ const CourseContentPlayer = ({ courseId, userEnrolled }) => {
                         onClick={() => {
                           if (playerRef.current) {
                             playerRef.current.src({
-                              src: `https://${window.location.hostname}/hls/${streamInfo.streamKey}.m3u8?t=${Date.now()}`,
+                              src: getStreamUrl(streamInfo.streamKey),
                               type: 'application/x-mpegURL'
                             });
                             playerRef.current.play();
