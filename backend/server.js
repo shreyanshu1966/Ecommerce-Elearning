@@ -20,7 +20,11 @@ connectDB();
 
 const app = express();
 app.use(express.json());
-app.use(cors());
+
+app.use(cors({
+    origin: 'https://www.intuitiverobotics.in', // Ensure only one origin is set
+    credentials: true,
+  }));
 
 app.use('/api/users', userRoutes);
 
